@@ -1,0 +1,32 @@
+{
+  "name": "@spiralstake/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Spiral Stake composition authority + read API — the read-data backbone (Step 1a).",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "node --import tsx --enable-source-maps src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "openapi": "tsx scripts/emit-openapi.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.7",
+    "bignumber.js": "9.3.1",
+    "hono": "^4.6.14",
+    "tsx": "^4.19.2",
+    "viem": "^2.45.3",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

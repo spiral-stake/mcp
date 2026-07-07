@@ -1,0 +1,58 @@
+// Centralised, validated configuration. All secrets/URLs come from the process
+// environment only — never checked in, never passed on the wire. A `.env` (if present)
+// is loaded once at startup via Node's built-in support.
+import { z } from "zod";
+
+// Node 20.6+ supports `--env-file`; we also load a local .env manually so `tsx`/tests
+// pick it up without a flag. Kept dependency-free (no dotenv).
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
+
+function loadDotEnv() {
+  for (const file of [".env.local", ".env"]) {
+    try {
+      const raw = readFileSync(resolve(process.cwd(), file), "utf8");
+      for (const line of raw.split("\n")) {
+        const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/i);
+        if (!m) continue;
+        const [, key, valRaw] = m;
+        if (process.env[key] !== undefined) continue; // real env wins
+        const val = valRaw.replace(/^["']|["']$/g, "");
+        process.env[key] = val;
+      }
+    } catch {
+      /* file absent — fine */
+    }
+  }
+}
+loadDotEnv();
+
+const schema = z.object({
+  PORT: z.coerce.number().int().positive().default(8787),
+  CHAIN_ID: z.coerce.number().int().positive().default(1),
+  LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
+  CORS_ORIGINS: z
+    .string()
+    .default("http://localhost:5173")
+    .transform((s) => s.split(",").map((o) => o.trim()).filter(Boolean)),
+  WARMER_ENABLED: z
+    .string()
+    .default("true")
+    .transform((s) => s.toLowerCase() !== "false"),
+
+  MAINNET_RPC_URL: z.string().url().optional(),
+  ROBINHOOD_RPC_URL: z.string().url().optional().or(z.literal("")),
+  COINGECKO_API_KEY: z.string().optional(),
+  ROYCO_API_KEY: z.string().optional(),
+  DASHBOARD_API_URL: z.string().url().optional(),
+});
+
+const parsed = schema.safeParse(process.env);
+if (!parsed.success) {
+  // Fail fast and loud — misconfiguration must never boot into a silently-degraded state.
+  console.error("[config] invalid environment:", parsed.error.flatten().fieldErrors);
+  throw new Error("Invalid environment configuration");
+}
+
+export const env = parsed.data;
+export type Env = typeof env;
