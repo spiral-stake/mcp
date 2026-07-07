@@ -1,0 +1,67 @@
+{
+  "flashLeverageAddress": "0x27eaF95d39cB07d544026167365689C34B4d3f9A",
+  "flashLeverageRouterAddress": "0x5F7550Bfdd7690E1CFe90c8DbB726964f4d34877",
+  "markets": {
+    "0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114": {
+      "collateralToken": {
+        "address": "0xde770c84FE66E063336b31737cFE9790f18c4087",
+        "decimals": 6,
+        "name": "Spark Savings USDG",
+        "symbol": "spUSDG"
+      },
+      "correlated": true,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
+      "oracle": "0xe694c531F65c4BaBc88A52d7178476e095e51574"
+    },
+    "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7": {
+      "collateralToken": {
+        "address": "0x40858070814a57FdF33a613ae84fE0a8b4a874f7",
+        "decimals": 6,
+        "name": "syrupUSDG",
+        "symbol": "syrupUSDG"
+      },
+      "correlated": true,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+      "oracle": "0x152c638fad68913739Ee19Ba8eF47fAEB09DCa91"
+    },
+    "0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6": {
+      "collateralToken": {
+        "address": "0x5d3a1Ff2b6BAb83b63cd9AD0787074081a52ef34",
+        "decimals": 18,
+        "name": "USDe",
+        "symbol": "USDe"
+      },
+      "correlated": true,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
+      "oracle": "0xE64849bd4AD03DfaBbe02bb521de19997a19055f"
+    }
+  },
+  "morphoAddress": "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010"
+}

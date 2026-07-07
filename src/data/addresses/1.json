@@ -1,0 +1,2068 @@
+{
+  "ETH": {
+    "address": "0x0000000000000000000000000000000000000000",
+    "decimals": 18,
+    "name": "Ethereum",
+    "symbol": "ETH",
+    "valueInUsd": 1000000
+  },
+  "USDC": {
+    "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "decimals": 6,
+    "name": "USD Coin",
+    "symbol": "USDC",
+    "valueInUsd": 1
+  },
+  "flashLeverageAddress": "0x2B12066ebD67A6A58E70b37051AbED0590E5A721",
+  "flashLeverageRouterAddress": "0x3D131d654e0C413E1cB2ab1071aad78A9470ef9d",
+  "markets": {
+    "0x09cf702bb8b6fe8c6effb6021744e365f598b89bc28f3ea7cd6c55115af825df": {
+      "collateralToken": {
+        "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "decimals": 18,
+        "name": "Savings USDS",
+        "symbol": "sUSDS"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+        "decimals": 6,
+        "name": "AUSD",
+        "symbol": "AUSD"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0x09cf702bb8b6fe8c6effb6021744e365f598b89bc28f3ea7cd6c55115af825df",
+      "oracle": "0x954f55c1278e3Ff5cC0a20cA4cE10c1863e5f230"
+    },
+    "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47": {
+      "collateralToken": {
+        "address": "0x5A19fa369F2895dCD8d2cEE62E4Ceae58eF92BBb",
+        "decimals": 18,
+        "maturity": 1786579200,
+        "name": "PT Ethena sUSDE 13AUG2026",
+        "symbol": "PT-sUSDE-13AUG2026",
+        "underlying": {
+          "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+          "decimals": 18,
+          "name": "Staked USDe",
+          "symbol": "sUSDe"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        "decimals": 18,
+        "name": "RLUSD",
+        "symbol": "RLUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x1749e02006bc6bd6a86af52d231511f6911d5e42318e028e51a28dfabc68dd47",
+      "oracle": "0x968eb911Db90BB8eA9E4792b05C94500bC1A62D7"
+    },
+    "0x4bb22a5f6313fc9d7b5e1438967bfcd0a513a839d26662dd8d235629942400e2": {
+      "collateralToken": {
+        "address": "0xc689f76F90FE1762faC55983Ff25ae71033A84F7",
+        "decimals": 6,
+        "maturity": 1787788800,
+        "name": "PT Staked USDat 27AUG2026",
+        "symbol": "PT-sUSDat-27AUG2026",
+        "underlying": {
+          "address": "0xD166337499E176bbC38a1FBd113Ab144e5bd2Df7",
+          "decimals": 18,
+          "name": "Staked USDat",
+          "symbol": "sUSDat"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x4bb22a5f6313fc9d7b5e1438967bfcd0a513a839d26662dd8d235629942400e2",
+      "oracle": "0x4FcF6507b4a9ed8b174AB2aFE51340f506DfbB39"
+    },
+    "0xf02d2e8f427a2b91785b3d09690ef9d3811bf674ba97b00bafc7665004a6dd97": {
+      "collateralToken": {
+        "address": "0xD341A146A4fD20eA89898E4d86Ae1829bF3A1c23",
+        "decimals": 18,
+        "maturity": 1787788800,
+        "name": "PT Savings Usdd 27AUG2026",
+        "symbol": "PT-sUSDD-27AUG2026",
+        "underlying": {
+          "address": "0xC5d6A7B61d18AfA11435a889557b068BB9f29930",
+          "decimals": 18,
+          "name": "Savings Usdd",
+          "symbol": "sUSDD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xf02d2e8f427a2b91785b3d09690ef9d3811bf674ba97b00bafc7665004a6dd97",
+      "oracle": "0x208C784A15347bF51919C0850ae869ca764B595D"
+    },
+    "0xdf6ca97d41975a6996e9db491cb38152b65d7c00807dfe15d95d8d76e5d122e0": {
+      "collateralToken": {
+        "address": "0xD341A146A4fD20eA89898E4d86Ae1829bF3A1c23",
+        "decimals": 18,
+        "maturity": 1787788800,
+        "name": "PT Savings Usdd 27AUG2026",
+        "symbol": "PT-sUSDD-27AUG2026",
+        "underlying": {
+          "address": "0xC5d6A7B61d18AfA11435a889557b068BB9f29930",
+          "decimals": 18,
+          "name": "Savings Usdd",
+          "symbol": "sUSDD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xdf6ca97d41975a6996e9db491cb38152b65d7c00807dfe15d95d8d76e5d122e0",
+      "oracle": "0x1F96824a00DD81bF4694471d1F0741E6A4de0cc2"
+    },
+    "0xebd23a871b52e0a8c92bd719f4413600101b69e946cb72923b3a33fb5bc6ec85": {
+      "collateralToken": {
+        "address": "0xb5Be35D8fF83D431899b95851CB17a2B4bcEF150",
+        "decimals": 18,
+        "maturity": 1793836800,
+        "name": "PT apyUSD 5NOV2026",
+        "symbol": "PT-apyUSD-5NOV2026",
+        "underlying": {
+          "address": "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A",
+          "decimals": 18,
+          "name": "apyUSD",
+          "symbol": "apyUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
+        "decimals": 18,
+        "name": "apxUSD",
+        "symbol": "apxUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xebd23a871b52e0a8c92bd719f4413600101b69e946cb72923b3a33fb5bc6ec85",
+      "oracle": "0xD3acB26E38465613B9a974caD2bA56FbCC7B87E9"
+    },
+    "0x1590cb22d797e226df92ebc6e0153427e207299916e7e4e53461389ad68272fb": {
+      "collateralToken": {
+        "address": "0xd3fD63209FA2D55B07A0f6db36C2f43900be3094",
+        "decimals": 18,
+        "name": "Wrapped Savings rUSD",
+        "symbol": "wsrUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0x1590cb22d797e226df92ebc6e0153427e207299916e7e4e53461389ad68272fb",
+      "oracle": "0x938D2eDb20425cF80F008E7ec314Eb456940Da15"
+    },
+    "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32": {
+      "collateralToken": {
+        "address": "0x73E0C0d45E048D25Fc26Fa3159b0aA04BfA4Db98",
+        "decimals": 8,
+        "name": "Kraken Wrapped Bitcoin",
+        "symbol": "kBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        "decimals": 18,
+        "name": "RLUSD",
+        "symbol": "RLUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x15bb2a6af0c909eed19fb1f2ceeead34ecbdcba626de752c6b09389ee14eec32",
+      "oracle": "0xBCC3D9834b84B32Cf540DBE948DEd4B47bec5ddb"
+    },
+    "0x23a7d0ff682b323363fb8ba58327ed87001f6306e09b7fd7413bbe4698e749c8": {
+      "collateralToken": {
+        "address": "0x890A5122Aa1dA30fEC4286DE7904Ff808F0bd74A",
+        "decimals": 18,
+        "name": "msY",
+        "symbol": "msY"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x23a7d0ff682b323363fb8ba58327ed87001f6306e09b7fd7413bbe4698e749c8",
+      "oracle": "0xB0b6Fc449CcF81Ff4129A86ddc814412E3Cd9Aa4"
+    },
+    "0x251b7cbc2c33ba4eabe3b7163ad0fdd3cfb97de80d8377f0f48b8d31aee7606f": {
+      "collateralToken": {
+        "address": "0xae78736Cd615f374D3085123A210448E74Fc6393",
+        "decimals": 18,
+        "name": "Rocket Pool ETH",
+        "symbol": "rETH"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "decimals": 18,
+        "name": "Wrapped Ether",
+        "symbol": "WETH"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0x251b7cbc2c33ba4eabe3b7163ad0fdd3cfb97de80d8377f0f48b8d31aee7606f",
+      "oracle": "0x837e3ceD92Aa5d045208A2Fd292a1e2DF9cFfA14"
+    },
+    "0x29ae8cad946d861464d5e829877245a863a18157c0cde2c3524434dafa34e476": {
+      "collateralToken": {
+        "address": "0xC5d6A7B61d18AfA11435a889557b068BB9f29930",
+        "decimals": 18,
+        "name": "Savings Usdd",
+        "symbol": "sUSDD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x29ae8cad946d861464d5e829877245a863a18157c0cde2c3524434dafa34e476",
+      "oracle": "0x8c0a80C09aE8A8cdd66F4F51598d7b494eCF8154"
+    },
+    "0x2fb3713487c7812e7309935b034f40228841666f6b048faf31fd2110ae674f20": {
+      "collateralToken": {
+        "address": "0x2d3C279E5FcDF5b793c0a75ed90738D7369B0b83",
+        "decimals": 18,
+        "maturity": 1784764800,
+        "name": "PT Staked cap USD 23JUL2026",
+        "symbol": "PT-stcUSD-23JUL2026",
+        "underlying": {
+          "address": "0x88887bE419578051FF9F4eb6C858A951921D8888",
+          "decimals": 18,
+          "name": "Staked cap USD",
+          "symbol": "stcUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x2fb3713487c7812e7309935b034f40228841666f6b048faf31fd2110ae674f20",
+      "oracle": "0x11aEFbf08bAB2b3f3141c2CC4749A638c4c3b674"
+    },
+    "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b": {
+      "collateralToken": {
+        "address": "0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD",
+        "decimals": 18,
+        "name": "Savings USDS",
+        "symbol": "sUSDS"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 965000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 962500000000000000,
+      "morphoMarketId": "0x3274643db77a064abd3bc851de77556a4ad2e2f502f4f0c80845fa8f909ecf0b",
+      "oracle": "0x0C426d174FC88B7A25d59945Ab2F7274Bf7B4C79"
+    },
+    "0x37e7484d642d90f14451f1910ba4b7b8e4c3ccdd0ec28f8b2bdb35479e472ba7": {
+      "collateralToken": {
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "decimals": 18,
+        "name": "Wrapped eETH",
+        "symbol": "weETH"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "decimals": 18,
+        "name": "Wrapped Ether",
+        "symbol": "WETH"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0x37e7484d642d90f14451f1910ba4b7b8e4c3ccdd0ec28f8b2bdb35479e472ba7",
+      "oracle": "0xbDd2F2D473E8D63d1BFb0185B5bDB8046ca48a72"
+    },
+    "0x39d11026eae1c6ec02aa4c0910778664089cdd97c3fd23f68f7cd05e2e95af48": {
+      "collateralToken": {
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "decimals": 18,
+        "name": "Staked USDe",
+        "symbol": "sUSDe"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+        "decimals": 18,
+        "name": "Dai Stablecoin",
+        "symbol": "DAI"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x39d11026eae1c6ec02aa4c0910778664089cdd97c3fd23f68f7cd05e2e95af48",
+      "oracle": "0x5D916980D5Ae1737a8330Bf24dF812b2911Aae25"
+    },
+    "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49": {
+      "collateralToken": {
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "decimals": 8,
+        "name": "Wrapped BTC",
+        "symbol": "WBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x3a85e619751152991742810df6ec69ce473daef99e28a64ab2340d7b7ccfee49",
+      "oracle": "0xDddd770BADd886dF3864029e4B377B5F6a2B6b83"
+    },
+    "0x3fea56ab83b05840dc83dc6b3d2f2fbd938147cbaa8126bac529e6c820058253": {
+      "collateralToken": {
+        "address": "0x3EAA0F0f0A5d3D595ae4e4b0D27f439d01c3E7b2",
+        "decimals": 6,
+        "maturity": 1782345600,
+        "name": "PT reUSD 25JUN2026",
+        "symbol": "PT-reUSD-25JUN2026",
+        "underlying": {
+          "address": "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72",
+          "decimals": 18,
+          "name": "Re Protocol Deposit Token",
+          "symbol": "reUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x3fea56ab83b05840dc83dc6b3d2f2fbd938147cbaa8126bac529e6c820058253",
+      "oracle": "0x5749F59D948910896527b20763a6d91F54227955"
+    },
+    "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa": {
+      "collateralToken": {
+        "address": "0x19ebb35279A16207Ec4ba82799CC64715065F7F6",
+        "decimals": 6,
+        "name": "Hastra PRIME",
+        "symbol": "PRIME"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x41c41d0c9aadbf4751f5ee215ed5a16954a4b34e1b70fca5393d4b08858fa3fa",
+      "oracle": "0x335e5718bC20028d5e357473a3736C187Ca6b07e"
+    },
+    "0x42c2b592fc759fad461fb5c80d5ea214a496f70d8594398d69af68c2f3798de6": {
+      "collateralToken": {
+        "address": "0x2D433b943FB8c015AE409444B7F960ED288082b4",
+        "decimals": 6,
+        "maturity": 1787788800,
+        "name": "PT Strata Senior USDat 27AUG2026",
+        "symbol": "PT-srUSDat-27AUG2026",
+        "underlying": {
+          "address": "0xFaa9a0e1Db9E22AE3A20B2B58a68DC24D053d066",
+          "decimals": 18,
+          "name": "Strata Senior USDat",
+          "symbol": "srUSDat"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x42c2b592fc759fad461fb5c80d5ea214a496f70d8594398d69af68c2f3798de6",
+      "oracle": "0x32966C34D92BA0d7E34206E4674b12460CeD32D7"
+    },
+    "0x43e925e52d7873fa8acac90dd5f246087d55b3a34c344b71884a6352491ff459": {
+      "collateralToken": {
+        "address": "0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39",
+        "decimals": 18,
+        "name": "f(x) USD Saving",
+        "symbol": "fxSAVE"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x43e925e52d7873fa8acac90dd5f246087d55b3a34c344b71884a6352491ff459",
+      "oracle": "0x16931Dcc888754Ae780B153598376a6474DE4440"
+    },
+    "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed": {
+      "collateralToken": {
+        "address": "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72",
+        "decimals": 18,
+        "name": "Re Protocol Deposit Token",
+        "symbol": "reUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x4565ac05d38b19374ccbb04c17cca60ca9353cd41824f0803d0fc7704f60eaed",
+      "oracle": "0xA66a4F03Fd8031973f8C7718904ce32385f54E70"
+    },
+    "0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca": {
+      "collateralToken": {
+        "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+        "decimals": 8,
+        "name": "Coinbase Wrapped BTC",
+        "symbol": "cbBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x45671fb8d5dea1c4fbca0b8548ad742f6643300eeb8dbd34ad64a658b2b05bca",
+      "oracle": "0x0E053750DFA4E809E5f7b119832C799c2aA138ac"
+    },
+    "0x4affe8d17d001e243cac3b414ab52112b1574103ef550d410e16c7815ae44580": {
+      "collateralToken": {
+        "address": "0xb45ad160634c528Cc3D2926d9807104FA3157305",
+        "decimals": 18,
+        "name": "Staked Dola",
+        "symbol": "sDOLA"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+        "decimals": 18,
+        "name": "Frax USD",
+        "symbol": "frxUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x4affe8d17d001e243cac3b414ab52112b1574103ef550d410e16c7815ae44580",
+      "oracle": "0x1eB7aC7Ff00568B2c01636487cA938821E931e32"
+    },
+    "0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3": {
+      "collateralToken": {
+        "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+        "decimals": 8,
+        "name": "Coinbase Wrapped BTC",
+        "symbol": "cbBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x4fe72543c5c95cd6b5f3cb516cd235ba882e2e705fe3424db6f99dfe5811d0d3",
+      "oracle": "0x9F983115741D0F7F2EAE07831415057AD3de34d2"
+    },
+    "0x582fdc4176da0ab5c65e086603ab9ecd9188e889e16efef6e35854cf14e15065": {
+      "collateralToken": {
+        "address": "0xD166337499E176bbC38a1FBd113Ab144e5bd2Df7",
+        "decimals": 18,
+        "name": "Staked USDat",
+        "symbol": "sUSDat"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+        "decimals": 6,
+        "name": "AUSD",
+        "symbol": "AUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x582fdc4176da0ab5c65e086603ab9ecd9188e889e16efef6e35854cf14e15065",
+      "oracle": "0x78e16Ed8a8ebC86B707316dC84BA7e3E74A3b23A"
+    },
+    "0x5d41b8d23ccf6d9e9f7e2b1b357d92bba6ef0367d6ef8ceda965f73e52108461": {
+      "collateralToken": {
+        "address": "0x098697bA3Fee4eA76294C5d6A466a4e3b3E95FE6",
+        "decimals": 18,
+        "name": "USP Yield Optimized Stablecoin",
+        "symbol": "USP"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x5d41b8d23ccf6d9e9f7e2b1b357d92bba6ef0367d6ef8ceda965f73e52108461",
+      "oracle": "0x5096642B7c7CD82198932f3FADd873EC2fcDeb6d"
+    },
+    "0x5eaaebc81e9e27972ab458811d1b60828e8ab51ef6620f9b3918fd7e68eecec1": {
+      "collateralToken": {
+        "address": "0x2d3C279E5FcDF5b793c0a75ed90738D7369B0b83",
+        "decimals": 18,
+        "maturity": 1784764800,
+        "name": "PT Staked cap USD 23JUL2026",
+        "symbol": "PT-stcUSD-23JUL2026",
+        "underlying": {
+          "address": "0x88887bE419578051FF9F4eb6C858A951921D8888",
+          "decimals": 18,
+          "name": "Staked cap USD",
+          "symbol": "stcUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x5eaaebc81e9e27972ab458811d1b60828e8ab51ef6620f9b3918fd7e68eecec1",
+      "oracle": "0x11aEFbf08bAB2b3f3141c2CC4749A638c4c3b674"
+    },
+    "0x5f8a138ba332398a9116910f4d5e5dcd9b207024c5290ce5bc87bc2dbd8e4a86": {
+      "collateralToken": {
+        "address": "0xE72B141DF173b999AE7c1aDcbF60Cc9833Ce56a8",
+        "decimals": 18,
+        "name": "ETHPlus",
+        "symbol": "ETH+"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "decimals": 18,
+        "name": "Wrapped Ether",
+        "symbol": "WETH"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0x5f8a138ba332398a9116910f4d5e5dcd9b207024c5290ce5bc87bc2dbd8e4a86",
+      "oracle": "0x0705CDc1e56f837D7F97Bc2bAE36bE3670dA02C0"
+    },
+    "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664": {
+      "collateralToken": {
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "decimals": 18,
+        "name": "Wrapped eETH",
+        "symbol": "weETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x61765602144e91e5ac9f9e98b8584eae308f9951596fd7f5e0f59f21cd2bf664",
+      "oracle": "0x5635a2F38c5dFd1d8fDB176d9CB5AEFA07bf6A68"
+    },
+    "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5": {
+      "collateralToken": {
+        "address": "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
+        "decimals": 18,
+        "name": "Staked infiniFi USD",
+        "symbol": "siUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xab5eB14c09D416F0aC63661E57EDB7AEcDb9BEfA",
+        "decimals": 18,
+        "name": "Metronome Synth USD",
+        "symbol": "msUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x64d2f82e674b764d618b630297813cd34bdc42a0fa66f92efa2ac8b1efe4bbd5",
+      "oracle": "0xC7bB5f34D645f3849a3091Ce4b6724631ee811Af"
+    },
+    "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64": {
+      "collateralToken": {
+        "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+        "decimals": 8,
+        "name": "Coinbase Wrapped BTC",
+        "symbol": "cbBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x64d65c9a2d91c36d56fbc42d69e979335320169b3df63bf92789e2c8883fcc64",
+      "oracle": "0xA6D6950c9F177F1De7f7757FB33539e3Ec60182a"
+    },
+    "0x69ef7fd17b42cd7df6d885aee1b11380837afbc1664b25587041cf193b31617b": {
+      "collateralToken": {
+        "address": "0x1D69402390657308C91179aa184bF992908c1e08",
+        "decimals": 6,
+        "maturity": 1787788800,
+        "name": "PT USDat 27AUG2026",
+        "symbol": "PT-USDat-27AUG2026",
+        "underlying": {
+          "address": "0x23238f20b894f29041f48D88eE91131C395Aaa71",
+          "decimals": 6,
+          "name": "USDat",
+          "symbol": "USDat"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x69ef7fd17b42cd7df6d885aee1b11380837afbc1664b25587041cf193b31617b",
+      "oracle": "0xDA25BFf53bF9E12c728Cd83Ff9Fc22c581f564CD"
+    },
+    "0x6a7e36eb088bd501d73f7ab4c5b8671358559341a78ce521c9e499dc0bc642b9": {
+      "collateralToken": {
+        "address": "0x8236a87084f8B84306f72007F36F2618A5634494",
+        "decimals": 8,
+        "name": "Lombard Staked Bitcoin",
+        "symbol": "LBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x6a7e36eb088bd501d73f7ab4c5b8671358559341a78ce521c9e499dc0bc642b9",
+      "oracle": "0x0AeAa9320d78a5Edb9387A08682d1738BCc64b1f"
+    },
+    "0x702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642": {
+      "collateralToken": {
+        "address": "0x928FB6ED39100a92B2480f5cbB93453f98D9F4cE",
+        "decimals": 18,
+        "maturity": 1784764800,
+        "name": "PT cap USD 23JUL2026",
+        "symbol": "PT-cUSD-23JUL2026",
+        "underlying": {
+          "address": "0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC",
+          "decimals": 18,
+          "name": "cap USD",
+          "symbol": "cUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x702b7ec7628de2622e51e1bb34a7e6ad9e95f3a25a2ed361e4ce621f23f5e642",
+      "oracle": "0x25b30502467639E8FA118451105269e9B9813DD2"
+    },
+    "0x710f02caee4555b8ff75b7d48e5b52adc48898dc0c670b977fb1ea83bf4e7d8a": {
+      "collateralToken": {
+        "address": "0x99CD4Ec3f88A45940936F469E4bB72A2A701EEB9",
+        "decimals": 18,
+        "name": "Staked USDS",
+        "symbol": "stUSDS"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x710f02caee4555b8ff75b7d48e5b52adc48898dc0c670b977fb1ea83bf4e7d8a",
+      "oracle": "0x9C56D403d26C0aE00FA2e767e12F6b588c203B3c"
+    },
+    "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d": {
+      "collateralToken": {
+        "address": "0x19ebb35279A16207Ec4ba82799CC64715065F7F6",
+        "decimals": 6,
+        "name": "Hastra PRIME",
+        "symbol": "PRIME"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x755f954513d31d5f24aaf3d0cdc5e913a28383f8ea8ff85be9ffffa7371fb64d",
+      "oracle": "0x999eFF9cA63D23A60A0Cd19B9F65A0918674119a"
+    },
+    "0x77e624dd9dd980810c2b804249e88f3598d9c7ec91f16aa5fbf6e3fdf6087f82": {
+      "collateralToken": {
+        "address": "0x99CD4Ec3f88A45940936F469E4bB72A2A701EEB9",
+        "decimals": 18,
+        "name": "Staked USDS",
+        "symbol": "stUSDS"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdC035D45d973E3EC169d2276DDab16f1e407384F",
+        "decimals": 18,
+        "name": "USDS Stablecoin",
+        "symbol": "USDS"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x77e624dd9dd980810c2b804249e88f3598d9c7ec91f16aa5fbf6e3fdf6087f82",
+      "oracle": "0x0A976226d113B67Bd42D672Ac9f83f92B44b454C"
+    },
+    "0x7e585a933ffe8443c371b4f8cfeb4430f5f6a14c2f32a898c26662c67a1cb8b8": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x7e585a933ffe8443c371b4f8cfeb4430f5f6a14c2f32a898c26662c67a1cb8b8",
+      "oracle": "0xe087AD7FE989cF63F8383579D160a20Ee7e69F9F"
+    },
+    "0x82053fe2fc3a3d6cb856458948e9c3589e76f20f3a2079606739b517587267ce": {
+      "collateralToken": {
+        "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+        "decimals": 8,
+        "name": "Coinbase Wrapped BTC",
+        "symbol": "cbBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2",
+        "decimals": 18,
+        "name": "EUR CoinVertible",
+        "symbol": "EURCV"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x82053fe2fc3a3d6cb856458948e9c3589e76f20f3a2079606739b517587267ce",
+      "oracle": "0xbA75FD248bF33D669D4c5Adf25d3e32779656E47"
+    },
+    "0x85d59152eeeab7ca024804895b358868d8dd1e134171be400d7792d5604a212c": {
+      "collateralToken": {
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "decimals": 18,
+        "name": "Wrapped eETH",
+        "symbol": "weETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x85d59152eeeab7ca024804895b358868d8dd1e134171be400d7792d5604a212c",
+      "oracle": "0x221898dA0890Fc5fb6c890Fcdc051FA97946eE11"
+    },
+    "0x88a18b2f4d94e7ad27a381b15531c06abf05a7c99dd5d3c3679875fed6f7e742": {
+      "collateralToken": {
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "decimals": 18,
+        "name": "Staked USDe",
+        "symbol": "sUSDe"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xC139190F447e929f090Edeb554D95AbB8b18aC1C",
+        "decimals": 18,
+        "name": "USDtb",
+        "symbol": "USDtb"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x88a18b2f4d94e7ad27a381b15531c06abf05a7c99dd5d3c3679875fed6f7e742",
+      "oracle": "0x67BcC03438D7d71c39343d7AD21cb73Dc19aDB89"
+    },
+    "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        "decimals": 18,
+        "name": "RLUSD",
+        "symbol": "RLUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x88abdf8693e663144c3544b9442e9b04520016d6ebc57aa76424c00ab1683c9d",
+      "oracle": "0x4e58cea93a5252547c99D04042de646b17531653"
+    },
+    "0x8924445a76b678c536df977ed9222fb0b23ee5311497dd0223fe6270bb20b4e6": {
+      "collateralToken": {
+        "address": "0xE24a3DC889621612422A64E6388927901608B91D",
+        "decimals": 18,
+        "name": "Staked USN",
+        "symbol": "sUSN"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x8924445a76b678c536df977ed9222fb0b23ee5311497dd0223fe6270bb20b4e6",
+      "oracle": "0xC415Cc3F04F9074A9562aEEe02591e65D39A94aa"
+    },
+    "0x908b037029b5c0671ba3b362eaf289c3199560d1d4632e6cb527cc7240fa006e": {
+      "collateralToken": {
+        "address": "0xAF687B5EcB525Ccea96115088999B4eD80C388b6",
+        "decimals": 18,
+        "maturity": 1793836800,
+        "name": "PT apxUSD 5NOV2026",
+        "symbol": "PT-apxUSD-5NOV2026",
+        "underlying": {
+          "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
+          "decimals": 18,
+          "name": "apxUSD",
+          "symbol": "apxUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x908b037029b5c0671ba3b362eaf289c3199560d1d4632e6cb527cc7240fa006e",
+      "oracle": "0xFb8B9A1b92B0F6CC3bb940F6CA670ca7dA455f9d"
+    },
+    "0x90ef0c5a0dc7c4de4ad4585002d44e9d411d212d2f6258e94948beecf8b4c0d5": {
+      "collateralToken": {
+        "address": "0x9D39A5DE30e57443BfF2A8307A4256c8797A3497",
+        "decimals": 18,
+        "name": "Staked USDe",
+        "symbol": "sUSDe"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x90ef0c5a0dc7c4de4ad4585002d44e9d411d212d2f6258e94948beecf8b4c0d5",
+      "oracle": "0xE6212D05cB5aF3C821Fef1C1A233a678724F9E7E"
+    },
+    "0x9464b3d42133c10c8b216d3d9429b43e98c2f3856a87940ef18b8bdd3e7bd831": {
+      "collateralToken": {
+        "address": "0x1D69402390657308C91179aa184bF992908c1e08",
+        "decimals": 6,
+        "maturity": 1787788800,
+        "name": "PT USDat 27AUG2026",
+        "symbol": "PT-USDat-27AUG2026",
+        "underlying": {
+          "address": "0x23238f20b894f29041f48D88eE91131C395Aaa71",
+          "decimals": 6,
+          "name": "USDat",
+          "symbol": "USDat"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+        "decimals": 6,
+        "name": "AUSD",
+        "symbol": "AUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x9464b3d42133c10c8b216d3d9429b43e98c2f3856a87940ef18b8bdd3e7bd831",
+      "oracle": "0xDAd04877702ca7F4a02ECCDfa1D0BFD2bB2Be6b8"
+    },
+    "0x9972be1fc530a3f5a34db25ee8ab4962cc4099cb65b2db22897c92cc9d22f59f": {
+      "collateralToken": {
+        "address": "0xb45ad160634c528Cc3D2926d9807104FA3157305",
+        "decimals": 18,
+        "name": "Staked Dola",
+        "symbol": "sDOLA"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x9972be1fc530a3f5a34db25ee8ab4962cc4099cb65b2db22897c92cc9d22f59f",
+      "oracle": "0xE661712f6bf8b7E444484DB428f495D7D4ecE3A3"
+    },
+    "0x9bc98c2f20ac58287ef2c860eea53a2fdc27c17a7817ff1206c0b7840cc7cd79": {
+      "collateralToken": {
+        "address": "0x3EAA0F0f0A5d3D595ae4e4b0D27f439d01c3E7b2",
+        "decimals": 6,
+        "maturity": 1782345600,
+        "name": "PT reUSD 25JUN2026",
+        "symbol": "PT-reUSD-25JUN2026",
+        "underlying": {
+          "address": "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72",
+          "decimals": 18,
+          "name": "Re Protocol Deposit Token",
+          "symbol": "reUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x9bc98c2f20ac58287ef2c860eea53a2fdc27c17a7817ff1206c0b7840cc7cd79",
+      "oracle": "0x12d66602C691Aa93E90415aB22FB0760695AC768"
+    },
+    "0x9c28c8fa039a8df548a7f27adf062d751b0f2e9b9131931810535543adb23291": {
+      "collateralToken": {
+        "address": "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A",
+        "decimals": 18,
+        "name": "apyUSD",
+        "symbol": "apyUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x9c28c8fa039a8df548a7f27adf062d751b0f2e9b9131931810535543adb23291",
+      "oracle": "0xff1487BDa8049a536F912e41E27B82a8A3845862"
+    },
+    "0xa0c6499787a7d046f91f2687558c021e2baae5a378885280a448183a926ef5f7": {
+      "collateralToken": {
+        "address": "0x80E1048eDE66ec4c364b4F22C8768fc657FF6A42",
+        "decimals": 6,
+        "name": "Upshift USDC",
+        "symbol": "upUSDC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xa0c6499787a7d046f91f2687558c021e2baae5a378885280a448183a926ef5f7",
+      "oracle": "0xf2c9EE3Fdc5D1e360d51b4840B4096F63913dF93"
+    },
+    "0xa4774e3e693fff2ebd1dcbbd69b1b0a5b9bb0ccc753bfda5dd07bdac97c4818a": {
+      "collateralToken": {
+        "address": "0x356B8d89c1e1239Cbbb9dE4815c39A1474d5BA7D",
+        "decimals": 6,
+        "name": "Syrup USDT",
+        "symbol": "syrupUSDT"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xa4774e3e693fff2ebd1dcbbd69b1b0a5b9bb0ccc753bfda5dd07bdac97c4818a",
+      "oracle": "0x34e50151c21c5f3499AcE66c7157aA547892e997"
+    },
+    "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99": {
+      "collateralToken": {
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "decimals": 8,
+        "name": "Wrapped BTC",
+        "symbol": "WBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xa921ef34e2fc7a27ccc50ae7e4b154e16c9799d3387076c421423ef52ac4df99",
+      "oracle": "0x008bF4B1cDA0cc9f0e882E0697f036667652E1ef"
+    },
+    "0xa9f70093360419b4544f17a4553ac5847d896be23f020295bd95c24af4df700e": {
+      "collateralToken": {
+        "address": "0xd3fD63209FA2D55B07A0f6db36C2f43900be3094",
+        "decimals": 18,
+        "name": "Wrapped Savings rUSD",
+        "symbol": "wsrUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0xa9f70093360419b4544f17a4553ac5847d896be23f020295bd95c24af4df700e",
+      "oracle": "0x03dfCa9A320ca88fA6a0A132F34822e4B13d6fa0"
+    },
+    "0xaa7231d6bee28b578efe38b52e801d5d3067023853342fc06ded437d2a80ef98": {
+      "collateralToken": {
+        "address": "0xa0769f7A8fC65e47dE93797b4e21C073c117Fc80",
+        "decimals": 5,
+        "name": "Spiko EU T-Bills Money Market Fund",
+        "symbol": "EUTBL"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 965000000000000000,
+      "loanToken": {
+        "address": "0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2",
+        "decimals": 18,
+        "name": "EUR CoinVertible",
+        "symbol": "EURCV"
+      },
+      "maxLtv": 962500000000000000,
+      "morphoMarketId": "0xaa7231d6bee28b578efe38b52e801d5d3067023853342fc06ded437d2a80ef98",
+      "oracle": "0xf071b0a62ef2a54c1Dca791134421EE16c2C43d9"
+    },
+    "0xab3196447663a41382ba4b4d55eab3fa702ee2cf071db224fd72492953040056": {
+      "collateralToken": {
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "decimals": 6,
+        "name": "Syrup USDC",
+        "symbol": "syrupUSDC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+        "decimals": 6,
+        "name": "AUSD",
+        "symbol": "AUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xab3196447663a41382ba4b4d55eab3fa702ee2cf071db224fd72492953040056",
+      "oracle": "0xEa876EF062E90a6478e726800A83f44D4EAe09Bc"
+    },
+    "0xacc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67": {
+      "collateralToken": {
+        "address": "0xcD9f5907F92818bC06c9Ad70217f089E190d2a32",
+        "decimals": 6,
+        "name": "Senior Royco USDC",
+        "symbol": "srRoyUSDC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xacc49fbf58feb1ac971acce68f8adc177c43682d6a7087bbd4991a05cb7a2c67",
+      "oracle": "0x86A807dc5E689F78e280B18413001Ca0c2426Ab0"
+    },
+    "0xae60b71b407e0517ead445b7113a7ffa07ea4a9379d526ade541a3e9ec777cb4": {
+      "collateralToken": {
+        "address": "0x08EFCC2F3e61185D0EA7F8830B3FEc9Bfa2EE313",
+        "decimals": 18,
+        "name": "Staked NUSD",
+        "symbol": "sNUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xae60b71b407e0517ead445b7113a7ffa07ea4a9379d526ade541a3e9ec777cb4",
+      "oracle": "0x28E82e7f25DbcD487af27C80DE4F62553260fecA"
+    },
+    "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xb323495f7e4148be5643a4ea4a8221eef163e4bccfdedc2a6f4696baacbc86cc",
+      "oracle": "0x48F7E36EB6B826B2dF4B2E630B62Cd25e89E40e2"
+    },
+    "0xb37c30f34bff11c81ee8400133965f450a5f7c5d81ba2cf5740076f49eabc95c": {
+      "collateralToken": {
+        "address": "0xb5Be35D8fF83D431899b95851CB17a2B4bcEF150",
+        "decimals": 18,
+        "maturity": 1793836800,
+        "name": "PT apyUSD 5NOV2026",
+        "symbol": "PT-apyUSD-5NOV2026",
+        "underlying": {
+          "address": "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A",
+          "decimals": 18,
+          "name": "apyUSD",
+          "symbol": "apyUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xb37c30f34bff11c81ee8400133965f450a5f7c5d81ba2cf5740076f49eabc95c",
+      "oracle": "0x100187B3074116255c5C644eAd561E920f654E65"
+    },
+    "0xb7843fe78e7e7fd3106a1b939645367967d1f986c2e45edb8932ad1896450877": {
+      "collateralToken": {
+        "address": "0x68749665FF8D2d112Fa859AA293F07A622782F38",
+        "decimals": 6,
+        "name": "Tether Gold",
+        "symbol": "XAUt"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 770000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 767500000000000000,
+      "morphoMarketId": "0xb7843fe78e7e7fd3106a1b939645367967d1f986c2e45edb8932ad1896450877",
+      "oracle": "0xc7d1FE3fBe90e8f755250CA3Ce4d2aE50873d9dc"
+    },
+    "0xb7a75cabc2e8eadd0bc661340a9e359d9828bed6d5cbbcd64188bca8c01e399e": {
+      "collateralToken": {
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "decimals": 8,
+        "name": "Wrapped BTC",
+        "symbol": "WBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x5F7827FDeb7c20b443265Fc2F40845B715385Ff2",
+        "decimals": 18,
+        "name": "EUR CoinVertible",
+        "symbol": "EURCV"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xb7a75cabc2e8eadd0bc661340a9e359d9828bed6d5cbbcd64188bca8c01e399e",
+      "oracle": "0x40721232bBd09e15E5Fc6c4F1E20a8465Be6A8E4"
+    },
+    "0xb8fc70e82bc5bb53e773626fcc6a23f7eefa036918d7ef216ecfb1950a94a85e": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 965000000000000000,
+      "loanToken": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "decimals": 18,
+        "name": "Wrapped Ether",
+        "symbol": "WETH"
+      },
+      "maxLtv": 962500000000000000,
+      "morphoMarketId": "0xb8fc70e82bc5bb53e773626fcc6a23f7eefa036918d7ef216ecfb1950a94a85e",
+      "oracle": "0xbD60A6770b27E084E8617335ddE769241B0e71D8"
+    },
+    "0xb8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e": {
+      "collateralToken": {
+        "address": "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3",
+        "decimals": 18,
+        "name": "Origin Ether",
+        "symbol": "OETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xb8fef900b383db2dbbf4458c7f46acf5b140f26d603a6d1829963f241b82510e",
+      "oracle": "0xE8aDfF9117151fb5ad7313873780b87cC56EEDB0"
+    },
+    "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99": {
+      "collateralToken": {
+        "address": "0xDBDC1Ef57537E34680B898E1FEBD3D68c7389bCB",
+        "decimals": 18,
+        "name": "Staked infiniFi USD",
+        "symbol": "siUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xbbf7ce1b40d32d3e3048f5cf27eeaa6de8cb27b80194690aab191a63381d8c99",
+      "oracle": "0xd2cC46b9B2D761502eF933320ecf0268EC0dfa6d"
+    },
+    "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394": {
+      "collateralToken": {
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "decimals": 6,
+        "name": "Syrup USDC",
+        "symbol": "syrupUSDC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        "decimals": 18,
+        "name": "RLUSD",
+        "symbol": "RLUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xc0ae375fd761ff19b3f04de5534c0f1ec110f80e1c2ede27c42c1c43c3040394",
+      "oracle": "0xf766F4F1Bcb0CBBF4EEF5E26FF7c7f66a713c1B5"
+    },
+    "0xc2c53d2b868e163da71de14a5113cc2743fc9b5ad7488334720ed2846566a8f6": {
+      "collateralToken": {
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "decimals": 18,
+        "name": "Wrapped eETH",
+        "symbol": "weETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xc2c53d2b868e163da71de14a5113cc2743fc9b5ad7488334720ed2846566a8f6",
+      "oracle": "0x631bEa187ae9D90B76ccf91aa8F5E3EE1cDc0F87"
+    },
+    "0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501": {
+      "collateralToken": {
+        "address": "0x80ac24aA929eaF5013f6436cdA2a7ba190f5Cc0b",
+        "decimals": 6,
+        "name": "Syrup USDC",
+        "symbol": "syrupUSDC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xc9629945524f3fde56c7e8854a6c3d48e76b9d97236abbe73c750fcc7aeb8501",
+      "oracle": "0xc8043d248551Ed19B33cbc89dCCd69148c827039"
+    },
+    "0xd0e50cdac92fe2172043f5e0c36532c6369d24947e40968f34a5e8819ca9ec5d": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "decimals": 18,
+        "name": "Wrapped Ether",
+        "symbol": "WETH"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0xd0e50cdac92fe2172043f5e0c36532c6369d24947e40968f34a5e8819ca9ec5d",
+      "oracle": "0xbD60A6770b27E084E8617335ddE769241B0e71D8"
+    },
+    "0xd570c19c0dc0fbe4ab7faf4a37c4150e1c141c8aada8ca3e1b4b6c1b712af93d": {
+      "collateralToken": {
+        "address": "0x99CD4Ec3f88A45940936F469E4bB72A2A701EEB9",
+        "decimals": 18,
+        "name": "Staked USDS",
+        "symbol": "stUSDS"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xd570c19c0dc0fbe4ab7faf4a37c4150e1c141c8aada8ca3e1b4b6c1b712af93d",
+      "oracle": "0xba3D2Dc1670763c6729CC923A922C7513C0f9DD0"
+    },
+    "0xd8a8e6667f58aa9229e8979bd619742b1660ee856c200a93e407dbccb7222323": {
+      "collateralToken": {
+        "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+        "decimals": 8,
+        "name": "Coinbase Wrapped BTC",
+        "symbol": "cbBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xd8a8e6667f58aa9229e8979bd619742b1660ee856c200a93e407dbccb7222323",
+      "oracle": "0x7681692A9F228fd7dAc0679238D467729Af4E9ca"
+    },
+    "0xd98cd88ae5b336086b39fb1d62ba6171282e946105b010143f0e89f8fe7cff36": {
+      "collateralToken": {
+        "address": "0xDA06eE2dACF9245Aa80072a4407deBDea0D7e341",
+        "decimals": 18,
+        "name": "Staked avETH",
+        "symbol": "savETH"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "decimals": 18,
+        "name": "Wrapped Ether",
+        "symbol": "WETH"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xd98cd88ae5b336086b39fb1d62ba6171282e946105b010143f0e89f8fe7cff36",
+      "oracle": "0x943da86D8686f86F0b3b43fF78A92AAE1A6Ed3a7"
+    },
+    "0xdbf4bc065d4e76f4505a523f2bba5e5ccdca94c16d67c3a6ff1dadbcbb26d4aa": {
+      "collateralToken": {
+        "address": "0x88887bE419578051FF9F4eb6C858A951921D8888",
+        "decimals": 18,
+        "name": "Staked cap USD",
+        "symbol": "stcUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xdbf4bc065d4e76f4505a523f2bba5e5ccdca94c16d67c3a6ff1dadbcbb26d4aa",
+      "oracle": "0x8C257cb4Ba8d5a78B3d82e2aAeC211700e94a814"
+    },
+    "0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9": {
+      "collateralToken": {
+        "address": "0xb8D89678E75a973E74698c976716308abB8a46A4",
+        "decimals": 18,
+        "name": "Staked avUSD",
+        "symbol": "savUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xe07d416323a1afbfe0bf2fe27ffb549ff565cf5c86d21b79fc60664038e597c9",
+      "oracle": "0x839940de5043e7c6eDaf063714AFe7F20De5ff12"
+    },
+    "0xe23380494e365453f72f736f2d941959ae945773eb67a06cf4f538c7c4201264": {
+      "collateralToken": {
+        "address": "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A",
+        "decimals": 18,
+        "name": "apyUSD",
+        "symbol": "apyUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
+        "decimals": 18,
+        "name": "apxUSD",
+        "symbol": "apxUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xe23380494e365453f72f736f2d941959ae945773eb67a06cf4f538c7c4201264",
+      "oracle": "0x770661EE520Ff9F7D8FaCAdC4EFF885739Bd8872"
+    },
+    "0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xe7e9694b754c4d4f7e21faf7223f6fa71abaeb10296a4c43a54a7977149687d2",
+      "oracle": "0x95DB30fAb9A3754e42423000DF27732CB2396992"
+    },
+    "0xe83d72fa5b00dcd46d9e0e860d95aa540d5ec106da5833108a9f826f21f36f52": {
+      "collateralToken": {
+        "address": "0xC26A6Fa2C37b38E549a4a1807543801Db684f99C",
+        "decimals": 18,
+        "name": "Pareto AA Tranche - FalconXUSDC",
+        "symbol": "AA_FalconXUSDC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 770000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 767500000000000000,
+      "morphoMarketId": "0xe83d72fa5b00dcd46d9e0e860d95aa540d5ec106da5833108a9f826f21f36f52",
+      "oracle": "0x52eA2C12734B5bB61e1edf52Bb0f01D9206493Fc"
+    },
+    "0xe9d96a2f8042486bfd8cfd22692e49cd355e8a51da2f427bdb2d3671fbe978ea": {
+      "collateralToken": {
+        "address": "0x998D7b14c123c1982404562b68edDB057b0477cB",
+        "decimals": 6,
+        "name": "Upshift Gamma USDC Vault",
+        "symbol": "upGAMMAusdc"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0x00000000eFE302BEAA2b3e6e1b18d08D69a9012a",
+        "decimals": 6,
+        "name": "AUSD",
+        "symbol": "AUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xe9d96a2f8042486bfd8cfd22692e49cd355e8a51da2f427bdb2d3671fbe978ea",
+      "oracle": "0x17efab746fdA38842Ff613B8c1f2593D220df495"
+    },
+    "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4": {
+      "collateralToken": {
+        "address": "0xCd5fE23C85820F7B72D0926FC9b05b43E359b7ee",
+        "decimals": 18,
+        "name": "Wrapped eETH",
+        "symbol": "weETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        "decimals": 18,
+        "name": "RLUSD",
+        "symbol": "RLUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xea4bfb18df0ee6bffb7b3f0270899a8adb92ab6b684709634c8276128813cfd4",
+      "oracle": "0x6ab351FfDe101BB24a97332f4f7162C1711f110b"
+    },
+    "0xeb17955ea422baeddbfb0b8d8c9086c5be7a9cfdefb292119a102e981a30062e": {
+      "collateralToken": {
+        "address": "0x88887bE419578051FF9F4eb6C858A951921D8888",
+        "decimals": 18,
+        "name": "Staked cap USD",
+        "symbol": "stcUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xeb17955ea422baeddbfb0b8d8c9086c5be7a9cfdefb292119a102e981a30062e",
+      "oracle": "0x8E3386B2f6084eB1B0988070c3d826995BD175c0"
+    },
+    "0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba": {
+      "collateralToken": {
+        "address": "0x238a700eD6165261Cf8b2e544ba797BC11e466Ba",
+        "decimals": 18,
+        "name": "Midas Fasanara ONE",
+        "symbol": "mF-ONE"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xef2c308b5abecf5c8750a1aa82b47c558005feb7a03f4f8e1ad682d71ac8d0ba",
+      "oracle": "0x0cB1928EcA8783F05a07D9Ae2AfB33f38BFBEb78"
+    },
+    "0xf4e9fb49e95a34320aea8b5e0ef515391a72368c39bdcf8ad8910645fd6eab97": {
+      "collateralToken": {
+        "address": "0x6DFF69eb720986E98Bb3E8b26cb9E02Ec1a35D12",
+        "decimals": 18,
+        "name": "Staked Yuzu USD",
+        "symbol": "syzUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xf4e9fb49e95a34320aea8b5e0ef515391a72368c39bdcf8ad8910645fd6eab97",
+      "oracle": "0x0604084149dCB25a1739899624333D69dB1A507e"
+    },
+    "0xf5c5df23559b0fb56560a7578ea17d81e245153ba64b8132df026c9358864d27": {
+      "collateralToken": {
+        "address": "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0",
+        "decimals": 18,
+        "name": "Wrapped liquid staked Ether 2.0",
+        "symbol": "wstETH"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x6c3ea9036406852006290770BEdFcAbA0e23A0e8",
+        "decimals": 6,
+        "name": "PayPal USD",
+        "symbol": "PYUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xf5c5df23559b0fb56560a7578ea17d81e245153ba64b8132df026c9358864d27",
+      "oracle": "0x9f02D619a875B0CA383D21772e136fC18B637916"
+    },
+    "0xf6a056627a51e511ec7f48332421432ea6971fc148d8f3c451e14ea108026549": {
+      "collateralToken": {
+        "address": "0x8236a87084f8B84306f72007F36F2618A5634494",
+        "decimals": 8,
+        "name": "Lombard Staked Bitcoin",
+        "symbol": "LBTC"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 945000000000000000,
+      "loanToken": {
+        "address": "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+        "decimals": 8,
+        "name": "Wrapped BTC",
+        "symbol": "WBTC"
+      },
+      "maxLtv": 942500000000000000,
+      "morphoMarketId": "0xf6a056627a51e511ec7f48332421432ea6971fc148d8f3c451e14ea108026549",
+      "oracle": "0xa98105B8227E0f2157816Feb7A331364A9B74F80"
+    },
+    "0xfd039edc69eac5eaab4a10463fdbcaca75d6eddb1f0e00248d73fc977fb2554b": {
+      "collateralToken": {
+        "address": "0x928FB6ED39100a92B2480f5cbB93453f98D9F4cE",
+        "decimals": 18,
+        "maturity": 1784764800,
+        "name": "PT cap USD 23JUL2026",
+        "symbol": "PT-cUSD-23JUL2026",
+        "underlying": {
+          "address": "0xcCcc62962d17b8914c62D74FfB843d73B2a3cccC",
+          "decimals": 18,
+          "name": "cap USD",
+          "symbol": "cUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xfd039edc69eac5eaab4a10463fdbcaca75d6eddb1f0e00248d73fc977fb2554b",
+      "oracle": "0x25b30502467639E8FA118451105269e9B9813DD2"
+    },
+    "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc": {
+      "collateralToken": {
+        "address": "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf",
+        "decimals": 8,
+        "name": "Coinbase Wrapped BTC",
+        "symbol": "cbBTC"
+      },
+      "correlated": false,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x8292Bb45bf1Ee4d140127049757C2E0fF06317eD",
+        "decimals": 18,
+        "name": "RLUSD",
+        "symbol": "RLUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xffd010618ed3cb39bb2c5de0e3e58d3d2ec9f52187a180f29723c31756a939bc",
+      "oracle": "0x8b36909dD84d310CBDe90cb286d9dAB285a245bd"
+    },
+    "0xf8c5aa31ea6b2a068a9eddb46dd110cae57bf0f12be9583a3f9a818effecba89": {
+      "collateralToken": {
+        "address": "0x7f47c3e6b2c00fC4eB4d5Ae50d0Ab0Ab6888Eb4D",
+        "decimals": 6,
+        "maturity": 1797465600,
+        "name": "PT USD3 17DEC2026",
+        "symbol": "PT-USD3-17DEC2026",
+        "underlying": {
+          "address": "0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc",
+          "decimals": 6,
+          "name": "USD3",
+          "symbol": "USD3"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xf8c5aa31ea6b2a068a9eddb46dd110cae57bf0f12be9583a3f9a818effecba89",
+      "oracle": "0xe5E6Ec063E63A9D0c6Ac041d0AD2bd03F7f08d72"
+    },
+    "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7": {
+      "collateralToken": {
+        "address": "0x056B269Eb1f75477a8666ae8C7fE01b64dD55eCc",
+        "decimals": 6,
+        "name": "USD3",
+        "symbol": "USD3"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0xe3df58f9d3011b7481ff36b939fa5f8da642f34ea5792d25d3958dbf1efa26d7",
+      "oracle": "0x68b4c2B2b2e245AB54a3bD55DfD5A9d84f029C06"
+    },
+    "0x02bb03bf55f07c3ed3eee8a25d8df60fb9d09a38db612f0e07cf5c4d3df0100d": {
+      "collateralToken": {
+        "address": "0xc1906aeCf868749a2DeE203F59b904c0cf212140",
+        "decimals": 6,
+        "maturity": 1790208000,
+        "name": "PT Global Dollar 24SEP2026",
+        "symbol": "PT-USDG-24SEP2026",
+        "underlying": {
+          "address": "0xe343167631d89B6Ffc58B88d6b7fB0228795491D",
+          "decimals": 6,
+          "name": "Global Dollar",
+          "symbol": "USDG"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x02bb03bf55f07c3ed3eee8a25d8df60fb9d09a38db612f0e07cf5c4d3df0100d",
+      "oracle": "0x4C0fE43eCF0C552F9cFE40D07B7fb5235d808076"
+    },
+    "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64": {
+      "collateralToken": {
+        "address": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+        "decimals": 6,
+        "maturity": 1796860800,
+        "name": "PT reUSD 10DEC2026",
+        "symbol": "PT-reUSD-10DEC2026",
+        "underlying": {
+          "address": "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72",
+          "decimals": 18,
+          "name": "Re Protocol Deposit Token",
+          "symbol": "reUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x1e9d614631a7df0ec07fb05b2c8cb2491575fd1a63a33bf187a6afb295a4fc64",
+      "oracle": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0"
+    },
+    "0x328aadb887d060f3d03727f6baaee56ed88570a97dc2ab49b2064a9410ccfd06": {
+      "collateralToken": {
+        "address": "0xA31b5941F2e74d89bDC66632959FE6A152692920",
+        "decimals": 18,
+        "name": "Stake DAO frxUSD/msUSD",
+        "symbol": "stakedao-FrxMsUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xCAcd6fd266aF91b8AeD52aCCc382b4e165586E29",
+        "decimals": 18,
+        "name": "Frax USD",
+        "symbol": "frxUSD"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x328aadb887d060f3d03727f6baaee56ed88570a97dc2ab49b2064a9410ccfd06",
+      "oracle": "0x9aA3BFB984f520Eb18A34030110010509A985B52"
+    },
+    "0x41b12bac98fdc74ffeb513771b0bd341a14733f57072f7236cf3730af06d7fa2": {
+      "collateralToken": {
+        "address": "0xBd373c9D3D8976a4FECC504a93c768BBE8C3227C",
+        "decimals": 18,
+        "name": "Royco Senior Tranche apyUSD",
+        "symbol": "ROY-ST-apyUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x41b12bac98fdc74ffeb513771b0bd341a14733f57072f7236cf3730af06d7fa2",
+      "oracle": "0xfcC6676c57E70daA29478cc6633122D135cD5A6F"
+    },
+    "0x4abde0597e71acc6d4dacd3d3edb2929e7289a40754a20eaeccaa66ff717be99": {
+      "collateralToken": {
+        "address": "0xCc5C22C7A6BCC25e66726AeF011dDE74289ED203",
+        "decimals": 18,
+        "name": "Midas M1 USD Market Neutral",
+        "symbol": "mM1-USD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x4abde0597e71acc6d4dacd3d3edb2929e7289a40754a20eaeccaa66ff717be99",
+      "oracle": "0xb5587Ca06248C8a52766592876c5dED6Ff7b0b0a"
+    },
+    "0x62878115c6ee109c256237eb6daef589d006258202682d2e210cad3bb19e0f09": {
+      "collateralToken": {
+        "address": "0xEe5C7CdA577484b70b65C21235ECbd302bB290E2",
+        "decimals": 18,
+        "maturity": 1787788800,
+        "name": "PT apyUSD 27AUG2026",
+        "symbol": "PT-apyUSD-27AUG2026",
+        "underlying": {
+          "address": "0x38EEb52F0771140d10c4E9A9a72349A329Fe8a6A",
+          "decimals": 18,
+          "name": "apyUSD",
+          "symbol": "apyUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x62878115c6ee109c256237eb6daef589d006258202682d2e210cad3bb19e0f09",
+      "oracle": "0x2c0A8C81d61529Bc08E0A4F780D098C8595c9158"
+    },
+    "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca": {
+      "collateralToken": {
+        "address": "0xeCfaFdC7741323a945A163ed068B5a3C43483957",
+        "decimals": 6,
+        "maturity": 1796860800,
+        "name": "PT reUSD 10DEC2026",
+        "symbol": "PT-reUSD-10DEC2026",
+        "underlying": {
+          "address": "0x5086bf358635B81D8C47C66d1C8b9E567Db70c72",
+          "decimals": 18,
+          "name": "Re Protocol Deposit Token",
+          "symbol": "reUSD"
+        }
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xdAC17F958D2ee523a2206206994597C13D831ec7",
+        "decimals": 6,
+        "name": "Tether USD",
+        "symbol": "USDT"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x6acd18854e43f93f5a90446004c35c72a68af1ad99f08cb247782ce6457914ca",
+      "oracle": "0x217d6DdCDB95112C51657F6270e8C079CFDB51f0"
+    },
+    "0xa3724490242354d512a92b79d779fa2037845233f0096c9acac36a1033097aee": {
+      "collateralToken": {
+        "address": "0xb45ad160634c528Cc3D2926d9807104FA3157305",
+        "decimals": 18,
+        "name": "Staked Dola",
+        "symbol": "sDOLA"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0x98A878b1Cd98131B271883B390f68D2c90674665",
+        "decimals": 18,
+        "name": "apxUSD",
+        "symbol": "apxUSD"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0xa3724490242354d512a92b79d779fa2037845233f0096c9acac36a1033097aee",
+      "oracle": "0xB78d26ba977898Defe668886d56b0FA1ca04cD4e"
+    }
+  },
+  "morphoAddress": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb"
+}
