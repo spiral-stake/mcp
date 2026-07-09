@@ -148,6 +148,7 @@ app.get("/v1/stable-apy", (c) => {
 // The v2-client consumes this to replace its own client-side composition (LTV-independent data).
 app.get("/v1/app/markets", (c) => {
   requireReady();
+  requireFreshMarketData();
   return c.json(buildAppMarkets(chainId));
 });
 

@@ -73,6 +73,37 @@ describe("http surface", () => {
     });
   });
 
+  // The app renders liquidation prices + maxLeverage from this feed and has no client-side
+  // fallback, so serving hours-old borrow/oracle data silently is worse than serving nothing.
+  describe("GET /v1/app/markets staleness guard", () => {
+    beforeEach(seedRequired);
+
+    it("200s while the critical groups are fresh", async () => {
+      const res = await app.request("/v1/app/markets");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.freshness.borrow.staleForSec).toBe(0);
+    });
+
+    it("503s when borrow data is stale beyond the grace (maxLeverage would be wrong)", async () => {
+      // age 1300s against a 300s budget => staleForSec 1000 > MAX_STALE_GRACE_SEC (900)
+      rawStore.setOk(KEYS.morphoMarkets(CHAIN), {}, 300, Date.now() - 1_300_000);
+      const res = await app.request("/v1/app/markets");
+      expect(res.status).toBe(503);
+      const body = (await res.json()) as any;
+      expect(body.error.code).toBe("upstream_unavailable");
+      expect(body.error.details.group).toBe("borrow");
+    });
+
+    it("503s when the oracle read is stale beyond the grace (liquidation price would be wrong)", async () => {
+      rawStore.setOk(KEYS.onchainCollateralValue(CHAIN), {}, 900, Date.now() - 1_900_000);
+      const res = await app.request("/v1/app/markets");
+      expect(res.status).toBe(503);
+      const body = (await res.json()) as any;
+      expect(body.error.details.group).toBe("collateralValue");
+    });
+  });
+
   describe("with required data primed", () => {
     beforeEach(seedRequired);
 
