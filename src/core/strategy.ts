@@ -235,7 +235,11 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
     },
 
     links: {
-      app: `${APP_BASE}/strategy/${market.morphoMarketId}`,
+      // Must match the app's prerendered route exactly — `/strategy/:id` renders an empty SPA
+      // shell, so an agent following it lands on a page with no content. The real page is
+      // `/{chainId}/strategies/{id}/{collateralSymbol}-{loanSymbol}` (see the app's
+      // scripts/prerender-routes.mjs, which writes one static page per market at that path).
+      app: `${APP_BASE}/${chainId}/strategies/${market.morphoMarketId}/${market.collateralToken.symbol}-${market.loanToken.symbol}`,
       market: `https://app.morpho.org/ethereum/market/${market.morphoMarketId}`,
       ...(info?.website ? { yieldSource: info.website } : {}),
     },
