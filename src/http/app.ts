@@ -10,7 +10,7 @@ import { env } from "../config/env.ts";
 import { childLogger } from "../config/logger.ts";
 import { ApiError, assertMarketId, errorResponse } from "./errors.ts";
 import { rawStore } from "../cache/store.ts";
-import { KEYS } from "../cache/policy.ts";
+import { KEYS, MAX_STALE_GRACE_SEC } from "../cache/policy.ts";
 import { warmer } from "../warmer/index.ts";
 import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { composeSnapshot } from "../core/compose.ts";
