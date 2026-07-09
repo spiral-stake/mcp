@@ -29,7 +29,13 @@ interface AddressesFile {
 }
 
 const collateralTokens = readJson<Record<string, CollateralTokenInfo>>("./collateralTokens.json");
-const loanTokens = readJson<Record<string, LoanTokenInfo>>("./loanTokens.json");
+// loanTokens.json is an ARRAY of { address, coingeckoId, ... } (mirrors the app). It must be read
+// as an array and indexed by address — treating it as an object keys everything by array index,
+// which silently breaks price lookups (loanToken USD falls back to $1 for non-stable loan tokens).
+const loanTokens = readJson<Array<{ address: string; coingeckoId?: string } & LoanTokenInfo>>(
+  "./loanTokens.json",
+);
+const loanTokenByAddress = new Map(loanTokens.map((t) => [t.address.toLowerCase(), t]));
 const oracleTypes = readJson<Record<string, OracleType>>("./oracleTypes.json");
 
 const addressesCache = new Map<number, AddressesFile>();
@@ -56,7 +62,7 @@ export function readMarkets(chainId: number): Market[] {
     const market = structuredClone(markets[marketId]);
 
     market.collateralToken.info = collateralTokens[market.collateralToken.address];
-    market.loanToken.coingeckoId = loanTokens[market.loanToken.address]?.coingeckoId;
+    market.loanToken.coingeckoId = loanTokenByAddress.get(market.loanToken.address.toLowerCase())?.coingeckoId;
     market.oracleType = market.oracle
       ? oracleTypeByAddress.get(market.oracle.toLowerCase())
       : undefined;

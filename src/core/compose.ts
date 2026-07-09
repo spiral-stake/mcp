@@ -61,9 +61,11 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
   const merkl = vMerkl?.value ?? { spot: {}, histories: {} };
   const borrowHistories = vBorrowHist?.value ?? {};
 
-  const priceOf = (address: string): BigNumber => {
+  // Loan-token USD defaults to 1 when unpriced (matches the app's `|| BigNumber(1)`); PT-underlying
+  // USD defaults to 0 (matches the app's `?? BigNumber(0)`), so pass fallback=0 for the underlying.
+  const priceOf = (address: string, fallback = 1): BigNumber => {
     const raw = prices[address];
-    return raw instanceof BigNumber ? raw : raw != null ? new BigNumber(raw as any) : new BigNumber(1);
+    return raw instanceof BigNumber ? raw : raw != null ? new BigNumber(raw as any) : new BigNumber(fallback);
   };
 
   const composed: ComposedMarket[] = [];
@@ -151,7 +153,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       ...(market.collateralToken.underlying && {
         underlying: {
           ...market.collateralToken.underlying,
-          valueInUsd: priceOf(market.collateralToken.underlying.address),
+          valueInUsd: priceOf(market.collateralToken.underlying.address, 0),
         },
       }),
     };

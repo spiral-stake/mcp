@@ -159,6 +159,25 @@ export function openApiSpec() {
           },
         },
       },
+      "/v1/stable-apy": {
+        get: {
+          summary: "StableWatch stable-pool APY snapshot + history",
+          description:
+            "The `{ stableApy: [...] }` snapshot the app previously fetched from the dashboard `/apy`. The mcp now owns this data. Not readiness-gated: serves last-good (or an empty list) with a visible stale flag.",
+          responses: { "200": { description: "OK" } },
+        },
+      },
+      "/v1/app/markets": {
+        get: {
+          summary: "Full composed Market[] for the v2-client app (raw domain model)",
+          description:
+            "The internal Market model the app consumes in place of its own client-side composition. Unlike /v1/strategies (curated, string APYs), values keep full precision: BigNumber is tagged as {\"$bn\":\"…\"} and bigint as {\"$bigint\":\"…\"}; revive both client-side before use.",
+          responses: {
+            "200": { description: "OK" },
+            "503": { description: "Not ready", content: { "application/json": { schema: errorEnvelope } } },
+          },
+        },
+      },
       "/v1/markets/borrow-apy-history": {
         get: { summary: "Borrow-APY history for all markets (charts)", responses: { "200": { description: "OK" } } },
       },

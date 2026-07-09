@@ -65,12 +65,13 @@ Every data read the app performs in `v2-client/src/api-services/*` maps to an en
 | App read (`api-services/*`) | mcp endpoint |
 |---|---|
 | `getTokenApy`, `getAllMorphoMarketsData`, `fetchMerklSpotIncentives`, prices, on-chain value → composed markets | `GET /v1/strategies`, `GET /v1/strategies/:id` |
+| `FlashLeverage.createInstance` → the app's full client-side `Market[]` composition | `GET /v1/app/markets` (raw domain model; `BigNumber`→`{"$bn":…}`, `bigint`→`{"$bigint":…}` — revive before use) |
 | `morpho.ts` `getAllBorrowApyHistories` / `getBorrowApyHistory` | `GET /v1/markets/borrow-apy-history`, `GET /v1/markets/:id/borrow-apy-history` |
 | `apy.ts` `resolveTokenApyHistory` (DeFiLlama/Royco/StableWatch history), `chart.ts` `getApyChart` | `GET /v1/collateral/apy-history`, `GET /v1/collateral/:id/apy-history` |
 | `merkl.ts` `fetchMerklIncentiveData` (borrow-incentive APR history) | `GET /v1/markets/:id/incentive-history` |
 | `token.ts` `getAllLoanTokenPrices` / `getTokenPrice` | `GET /v1/prices` |
 | `chart.ts` `getMarketChart` (CoinGecko price chart) | `GET /v1/prices/chart?coinId=&days=&currency=` (on-demand proxy) |
-| `dashboard.ts` `getApySnapshot` (StableWatch stable APY) | fetched directly from StableWatch as a warmed upstream — the mcp **owns** this data now and no longer depends on the dashboard `/apy` endpoint |
+| `dashboard.ts` `getApySnapshot` (StableWatch stable APY) | `GET /v1/stable-apy` — fetched directly from StableWatch as a warmed upstream; the mcp **owns** this data now and no longer depends on the dashboard `/apy` endpoint |
 | swap/meta-dex aggregators, referral, positions | **out of scope** (execution / backend domains) |
 
 Cross-cutting: `/v1` versioning, CORS limited to `CORS_ORIGINS`, a consistent error envelope

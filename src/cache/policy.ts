@@ -33,11 +33,13 @@ export const POLICY = {
   // Borrow incentives (Merkl): spot + daily APR history.
   merkl: { refreshEverySec: 30 * M, staleAfterSec: 60 * M } satisfies WarmPolicy,
 
-  // Token/loan prices (CoinGecko).
-  prices: { refreshEverySec: 2 * M, staleAfterSec: 5 * M } satisfies WarmPolicy,
+  // Token/loan prices (CoinGecko). Loan tokens are mostly stablecoins (~$1) that barely move, and
+  // the CoinGecko demo key is rate-capped — so refresh at 5m (not 2m) to stay well under quota.
+  prices: { refreshEverySec: 5 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
 
   // On-chain collateral value in loan token (oracle read via viem) — feeds priceUsd + LTVs.
-  onchainCollateralValue: { refreshEverySec: 2 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
+  // Mostly NAV oracles (slow-moving redemption rates); 5m refresh is ample and cuts RPC load.
+  onchainCollateralValue: { refreshEverySec: 5 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
 } as const;
 
 // Exit slippage is NOT warmed from a live upstream — it is baked into collateralTokens.json by
