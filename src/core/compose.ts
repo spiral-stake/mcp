@@ -12,7 +12,7 @@ import { rawStore, type FreshView } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { isStUSDS, isSpUSDG } from "../sources/onchain.ts";
 import type { MorphoMarketData, BorrowHistoryPoint } from "../sources/morpho.ts";
-import type { ApySnapshot } from "../sources/dashboard.ts";
+import type { ApySnapshot } from "../sources/stablewatch.ts";
 import type { PendleMarket } from "../sources/pendle.ts";
 import type { DefillamaPoint } from "../sources/defillama.ts";
 import type { MerklIncentiveData } from "../sources/merkl.ts";
@@ -39,7 +39,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
   const vMorpho = rawStore.view<Record<string, MorphoMarketData>>(KEYS.morphoMarkets(chainId));
   const vColl = rawStore.view<Record<string, BigNumber>>(KEYS.onchainCollateralValue(chainId));
   const vPrices = rawStore.view<Record<string, BigNumber>>(KEYS.prices(chainId));
-  const vSnapshot = rawStore.view<ApySnapshot>(KEYS.dashboardApy());
+  const vSnapshot = rawStore.view<ApySnapshot>(KEYS.stablewatchApy());
   const vPendle = rawStore.view<PendleMarket[]>(KEYS.pendle());
   const vDefillama = rawStore.view<Record<string, DefillamaPoint[]>>(KEYS.defillamaAll(chainId));
   const vRoyco = rawStore.view<Record<string, { apy: string; history: ApyHistoryPoint[] }>>(KEYS.roycoAll(chainId));
@@ -176,7 +176,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     [KEYS.morphoMarkets(chainId)]: vMorpho,
     [KEYS.onchainCollateralValue(chainId)]: vColl,
     [KEYS.prices(chainId)]: vPrices,
-    [KEYS.dashboardApy()]: vSnapshot,
+    [KEYS.stablewatchApy()]: vSnapshot,
     [KEYS.pendle()]: vPendle,
     [KEYS.defillamaAll(chainId)]: vDefillama,
     [KEYS.roycoAll(chainId)]: vRoyco,
@@ -199,7 +199,7 @@ export function apySourceKey(chainId: number, source: ApySource, collateralAddre
     case "royco":
       return KEYS.roycoAll(chainId);
     case "stablewatch":
-      return KEYS.dashboardApy();
+      return KEYS.stablewatchApy();
     case "onchain":
       return isStUSDS(collateralAddress)
         ? KEYS.onchainStUSDS()

@@ -40,7 +40,7 @@ function seedStore() {
   rawStore.setOk(KEYS.onchainCollateralValue(CHAIN), { [m0.morphoMarketId]: new BigNumber("1.02") }, 900);
   rawStore.setOk(KEYS.prices(CHAIN), { [m0.loanToken.address]: new BigNumber("1") }, 300);
   rawStore.setOk(
-    KEYS.dashboardApy(),
+    KEYS.stablewatchApy(),
     {
       stableApy: [
         {
