@@ -15,6 +15,8 @@ import { warmer } from "../warmer/index.ts";
 import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { fetchMarketChart } from "../sources/coingecko.ts";
+import { buildAppMarkets } from "./appMarkets.ts";
+import type { ApySnapshot } from "../sources/stablewatch.ts";
 import { openApiSpec } from "./openapi.ts";
 import type { BorrowHistoryPoint } from "../sources/morpho.ts";
 import type { MerklIncentiveData } from "../sources/merkl.ts";
@@ -102,6 +104,21 @@ app.get("/v1/strategies/:id", (c) => {
   const strategy = buildStrategy(chainId, id);
   if (!strategy) throw new ApiError("not_found", `No strategy for market ${id}`);
   return c.json(strategy);
+});
+
+// ── v1: app-surface — StableWatch stable-APY snapshot (replaces the dashboard /apy the app used) ──
+// Same `{ stableApy: [...] }` shape the dashboard served, so the app's getApySnapshot consumers
+// (getTokenApy history, getApyChart) work unchanged. Not readiness-gated: serves last-good/empty.
+app.get("/v1/stable-apy", (c) => {
+  const view = rawStore.view<ApySnapshot>(KEYS.stablewatchApy());
+  return c.json({ asOf: view?.asOf ?? null, stale: view?.stale ?? true, stableApy: view?.value?.stableApy ?? [] });
+});
+
+// ── v1: app-surface — full composed Market[] (raw, tagged BigNumber/bigint) ──
+// The v2-client consumes this to replace its own client-side composition (LTV-independent data).
+app.get("/v1/app/markets", (c) => {
+  requireReady();
+  return c.json(buildAppMarkets(chainId));
 });
 
 // ── v1: app-surface — borrow-APY history (charts) ──

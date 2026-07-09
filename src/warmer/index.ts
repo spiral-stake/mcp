@@ -66,10 +66,7 @@ export class Warmer {
 
     // Every token that needs a USD price (loan tokens + PT underlyings), mirroring FlashLeverage.
     const priceTokens: { address: string; coingeckoId?: string }[] = [
-      ...Object.entries(registries.loanTokens).map(([address, info]) => ({
-        address,
-        coingeckoId: (info as { coingeckoId?: string }).coingeckoId,
-      })),
+      ...registries.loanTokens.map((t) => ({ address: t.address, coingeckoId: t.coingeckoId })),
       ...markets
         .filter((m) => m.collateralToken.isPt && m.collateralToken.underlying?.coingeckoId)
         .map((m) => ({
@@ -101,10 +98,13 @@ export class Warmer {
         run: () => fetchAllCollateralValuesInLoanToken(chainId, markets),
       },
       {
+        // NOT required: prices only affect USD *display* values, not LTV/leverage/liquidation math.
+        // A CoinGecko outage must degrade USD values (the store serves last-good, and priceOf falls
+        // back to 1 — exactly what the app does) rather than 503 every strategy read.
         name: "prices",
         key: KEYS.prices(chainId),
         policy: POLICY.prices,
-        required: true,
+        required: false,
         run: () => fetchTokenPrices(priceTokens),
       },
       {

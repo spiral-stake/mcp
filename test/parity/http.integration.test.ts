@@ -79,5 +79,29 @@ describe("http surface", () => {
       const body = (await res.json()) as any;
       expect(body.prices[m0.loanToken.address]).toBe(1);
     });
+
+    it("GET /v1/app/markets serves the raw Market[] with tagged precision values", async () => {
+      const res = await app.request("/v1/app/markets");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      const m = body.markets.find((x: any) => x.morphoMarketId === m0.morphoMarketId);
+      expect(m).toBeDefined();
+      // BigNumber / bigint arrive tagged, not as JSON numbers (which would lose precision).
+      expect(m.collateralTokenValueInLoanToken).toEqual({ $bn: "1.02" });
+      expect(m.marketParams.lltv.$bigint).toBe("945000000000000000");
+      // the app's leverage inputs are present
+      expect(m.safeLtv).toBe("93.50");
+      expect(m.defaultLeverage).toBeTruthy();
+    });
+  });
+
+  it("GET /v1/stable-apy is not readiness-gated and reports its staleness", async () => {
+    rawStore.setOk(KEYS.stablewatchApy(), { stableApy: [{ id: "0xabc", asset: "X" }] }, 43200);
+    const res = await app.request("/v1/stable-apy");
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as any;
+    expect(body.stableApy).toHaveLength(1);
+    expect(body.stale).toBe(false);
+    expect(body.asOf).toBeTruthy();
   });
 });
