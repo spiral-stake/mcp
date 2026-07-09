@@ -43,11 +43,11 @@ app.use("*", async (c, next) => {
   });
 });
 
-// ── CORS limited to the configured app origins ──
+// ── CORS — public read API, all origins allowed ──
 app.use(
   "*",
   cors({
-    origin: (origin) => (env.CORS_ORIGINS.includes(origin) ? origin : env.CORS_ORIGINS[0] ?? ""),
+    origin: "*",
     allowMethods: ["GET", "OPTIONS"],
     allowHeaders: ["content-type", "x-correlation-id"],
   }),
