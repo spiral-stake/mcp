@@ -70,7 +70,7 @@ Every data read the app performs in `v2-client/src/api-services/*` maps to an en
 | `merkl.ts` `fetchMerklIncentiveData` (borrow-incentive APR history) | `GET /v1/markets/:id/incentive-history` |
 | `token.ts` `getAllLoanTokenPrices` / `getTokenPrice` | `GET /v1/prices` |
 | `chart.ts` `getMarketChart` (CoinGecko price chart) | `GET /v1/prices/chart?coinId=&days=&currency=` (on-demand proxy) |
-| `dashboard.ts` `getApySnapshot` | consumed internally as a warmed upstream (not re-exposed) |
+| `dashboard.ts` `getApySnapshot` (StableWatch stable APY) | fetched directly from StableWatch as a warmed upstream — the mcp **owns** this data now and no longer depends on the dashboard `/apy` endpoint |
 | swap/meta-dex aggregators, referral, positions | **out of scope** (execution / backend domains) |
 
 Cross-cutting: `/v1` versioning, CORS limited to `CORS_ORIGINS`, a consistent error envelope

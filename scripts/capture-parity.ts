@@ -1,5 +1,5 @@
 // Live parity capture (requires real env: MAINNET_RPC_URL, COINGECKO_API_KEY, ROYCO_API_KEY,
-// DASHBOARD_API_URL). Primes the warmer against real upstreams, then writes the composed
+// STABLEWATCH_API_KEY). Primes the warmer against real upstreams, then writes the composed
 // /strategies output (+ app-surface reads) to test/fixtures/ as the golden snapshot.
 //
 // The parity gate is completed by diffing this golden against the app's current client-side

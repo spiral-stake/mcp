@@ -10,7 +10,7 @@ import { KEYS, POLICY, type WarmPolicy } from "../cache/policy.ts";
 import { readMarkets } from "../data/markets.ts";
 import { Market } from "../types/index.ts";
 
-import { fetchApySnapshot } from "../sources/dashboard.ts";
+import { fetchStablewatchApy } from "../sources/stablewatch.ts";
 import { fetchPendleMarkets } from "../sources/pendle.ts";
 import { fetchDefillamaChart, type DefillamaPoint } from "../sources/defillama.ts";
 import { fetchRoycoVaultApy, fetchRoycoVaultApyHistory } from "../sources/royco.ts";
@@ -108,11 +108,11 @@ export class Warmer {
         run: () => fetchTokenPrices(priceTokens),
       },
       {
-        name: "dashboard-apy",
-        key: KEYS.dashboardApy(),
-        policy: POLICY.dashboardApy,
+        name: "stablewatch-apy",
+        key: KEYS.stablewatchApy(),
+        policy: POLICY.stablewatchApy,
         required: false,
-        run: () => fetchApySnapshot(),
+        run: () => fetchStablewatchApy(),
       },
       {
         name: "pendle",

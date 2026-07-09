@@ -22,8 +22,8 @@ export const POLICY = {
   // Borrow-APY history (charts + 30/60/90d windows).
   morphoBorrowHistory: { refreshEverySec: 30 * M, staleAfterSec: 60 * M } satisfies WarmPolicy,
 
-  // Collateral APY — non-PT (StableWatch via dashboard /apy, DeFiLlama, Royco, on-chain).
-  dashboardApy: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
+  // Collateral APY — non-PT (StableWatch direct, DeFiLlama, Royco, on-chain).
+  stablewatchApy: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
   defillama: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
   royco: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
   onchainApy: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
@@ -49,7 +49,7 @@ export const EXIT_LIQUIDITY_STALE_AFTER_SEC = 24 * H;
 export const KEYS = {
   morphoMarkets: (chainId: number) => `morpho:markets:${chainId}`,
   morphoBorrowHistory: (chainId: number) => `morpho:borrowHistory:${chainId}`,
-  dashboardApy: () => `apy:dashboard-snapshot`,
+  stablewatchApy: () => `apy:stablewatch-snapshot`,
   defillamaAll: (chainId: number) => `apy:defillama:all:${chainId}`,
   roycoAll: (chainId: number) => `apy:royco:all:${chainId}`,
   pendle: () => `apy:pendle:markets`,

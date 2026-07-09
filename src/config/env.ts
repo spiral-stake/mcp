@@ -44,7 +44,9 @@ const schema = z.object({
   ROBINHOOD_RPC_URL: z.string().url().optional().or(z.literal("")),
   COINGECKO_API_KEY: z.string().optional(),
   ROYCO_API_KEY: z.string().optional(),
-  DASHBOARD_API_URL: z.string().url().optional(),
+  // StableWatch is fetched directly (the mcp owns /apy now). Optional: absent → the stable-APY
+  // group degrades to last-good/empty rather than blocking boot.
+  STABLEWATCH_API_KEY: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
