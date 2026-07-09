@@ -49,6 +49,30 @@ describe("http surface", () => {
     expect(res.headers.get("x-correlation-id")).toBeTruthy();
   });
 
+  // The app caches this response for 30 minutes, so an empty 200 during a cold start would
+  // poison its cache long after recovery. It must 503 instead (the dashboard's old behaviour).
+  describe("GET /v1/stable-apy", () => {
+    it("503s when there are no pools to serve, so the app never caches an empty snapshot", async () => {
+      rawStore.setOk(KEYS.stablewatchApy(), { stableApy: [] }, 43200);
+      const res = await app.request("/v1/stable-apy");
+      expect(res.status).toBe(503);
+      const body = (await res.json()) as any;
+      expect(body.error.code).toBe("not_ready");
+    });
+
+    it("200s with the pools once primed", async () => {
+      rawStore.setOk(
+        KEYS.stablewatchApy(),
+        { stableApy: [{ id: "0xabc", metrics: { apy: { avg7d: 5 } }, history: [] }] },
+        43200,
+      );
+      const res = await app.request("/v1/stable-apy");
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as any;
+      expect(body.stableApy).toHaveLength(1);
+    });
+  });
+
   describe("with required data primed", () => {
     beforeEach(seedRequired);
 

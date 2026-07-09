@@ -42,6 +42,13 @@ export const POLICY = {
   onchainCollateralValue: { refreshEverySec: 5 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
 } as const;
 
+// Hard bound on serving last-good data to the APP. The store keeps last-good indefinitely so a
+// brief upstream blip degrades gracefully rather than dropping to zero — but the app renders
+// liquidation prices and maxLeverage from this data, so past this grace we refuse to serve at all
+// rather than show silently-stale numbers. Measured in seconds PAST a group's staleAfterSec.
+// (Agents are unaffected: /v1/strategies ships per-group `freshness` and decides for itself.)
+export const MAX_STALE_GRACE_SEC = 15 * 60;
+
 // Exit slippage is NOT warmed from a live upstream — it is baked into collateralTokens.json by
 // the app's weekly refresh script (scripts/refresh-exit-slippage.mjs). We read it from config and
 // use the file mtime as its `asOf`. CONTRACT: 12h refresh, 24h grace.

@@ -70,6 +70,28 @@ function requireReady() {
   }
 }
 
+// Groups whose staleness would silently corrupt what the app renders: borrow APY + liquidity
+// (drive maxLeverage) and the oracle read (drives liquidation price). Serving hours-old values
+// here is worse than serving nothing, so past MAX_STALE_GRACE_SEC we 503 and let the app surface
+// an error. Prices are deliberately excluded — they only affect USD display and are allowed to
+// degrade (see the warmer: `prices` is not a required job).
+function requireFreshMarketData() {
+  const critical: [string, string][] = [
+    ["borrow", KEYS.morphoMarkets(chainId)],
+    ["collateralValue", KEYS.onchainCollateralValue(chainId)],
+  ];
+  for (const [group, key] of critical) {
+    const view = rawStore.view(key);
+    if (!view || view.staleForSec > MAX_STALE_GRACE_SEC) {
+      throw new ApiError("upstream_unavailable", `Market data is too stale to serve (${group})`, {
+        group,
+        asOf: view?.asOf ?? null,
+        staleForSec: view?.staleForSec ?? null,
+      });
+    }
+  }
+}
+
 // ── liveness / readiness ──
 app.get("/health", (c) =>
   c.json({ status: "ok", uptimeSec: Math.floor(process.uptime()), chainId, cache: rawStore.stats() }),
@@ -108,10 +130,18 @@ app.get("/v1/strategies/:id", (c) => {
 
 // ── v1: app-surface — StableWatch stable-APY snapshot (replaces the dashboard /apy the app used) ──
 // Same `{ stableApy: [...] }` shape the dashboard served, so the app's getApySnapshot consumers
-// (getTokenApy history, getApyChart) work unchanged. Not readiness-gated: serves last-good/empty.
+// (getApyChart) work unchanged. Once primed the store serves last-good, so a StableWatch outage
+// still returns the previous pools rather than an empty set.
+//
+// 503 (never 200-with-empty) when there is nothing to serve: the app caches this response for 30
+// minutes, so a 200 with `stableApy: []` during a cold start would poison its cache long after we
+// recovered. Mirrors the dashboard's old `503 "APY data not yet available"`, which the app's
+// callers already handle by degrading (empty chart) and retrying.
 app.get("/v1/stable-apy", (c) => {
   const view = rawStore.view<ApySnapshot>(KEYS.stablewatchApy());
-  return c.json({ asOf: view?.asOf ?? null, stale: view?.stale ?? true, stableApy: view?.value?.stableApy ?? [] });
+  const stableApy = view?.value?.stableApy ?? [];
+  if (stableApy.length === 0) throw new ApiError("not_ready", "APY data not yet available");
+  return c.json({ asOf: view?.asOf ?? null, stale: view?.stale ?? true, stableApy });
 });
 
 // ── v1: app-surface — full composed Market[] (raw, tagged BigNumber/bigint) ──
