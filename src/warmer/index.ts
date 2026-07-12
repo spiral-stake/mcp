@@ -17,6 +17,7 @@ import { fetchRoycoVaultApy, fetchRoycoVaultApyHistory } from "../sources/royco.
 import { fetchAllMorphoMarketsData, fetchAllBorrowApyHistories } from "../sources/morpho.ts";
 import { fetchMerklIncentiveData } from "../sources/merkl.ts";
 import { fetchTokenPrices } from "../sources/coingecko.ts";
+import { fetchExitLiquidity, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import {
   fetchStUSDApy,
   fetchSpUSDGApy,
@@ -162,6 +163,21 @@ export class Warmer {
             }),
           );
           return Object.fromEntries(entries);
+        },
+      },
+      {
+        // Exit-liquidity slippage via Kyberswap sweep (replaces the app's manual refresh:liquidity).
+        // Merge fresh over prior so a per-token transient failure keeps that token's previous value
+        // (fetchExitLiquidity omits transient tokens). Compose falls back to the baked seed until
+        // the first successful sweep populates the cache.
+        name: "exit-liquidity",
+        key: KEYS.exitLiquidity(chainId),
+        policy: POLICY.exitLiquidity,
+        required: false,
+        run: async () => {
+          const prior = this.store.view<ExitLiquidityMap>(KEYS.exitLiquidity(chainId))?.value ?? {};
+          const fresh = await fetchExitLiquidity(markets);
+          return { ...prior, ...fresh };
         },
       },
       {

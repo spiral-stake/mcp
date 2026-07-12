@@ -13,6 +13,7 @@ import { rawStore, type FreshView } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { isStUSDS, isSpUSDG } from "../sources/onchain.ts";
 import type { MorphoMarketData, BorrowHistoryPoint } from "../sources/morpho.ts";
+import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
 import type { PendleMarket } from "../sources/pendle.ts";
 import type { DefillamaPoint } from "../sources/defillama.ts";
@@ -48,8 +49,10 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
   const vSpUSDG = rawStore.view<string>(KEYS.onchainSpUSDG());
   const vMerkl = rawStore.view<MerklIncentiveData>(KEYS.merkl(chainId));
   const vBorrowHist = rawStore.view<Record<string, BorrowHistoryPoint[]>>(KEYS.morphoBorrowHistory(chainId));
+  const vExit = rawStore.view<ExitLiquidityMap>(KEYS.exitLiquidity(chainId));
 
   const morphoData = vMorpho?.value ?? {};
+  const exitLiquidity = vExit?.value ?? {};
   const collateralValues = vColl?.value ?? {};
   const prices = vPrices?.value ?? {};
   const snapshot = vSnapshot?.value;
@@ -160,6 +163,14 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     };
     market.loanToken = { ...market.loanToken, valueInUsd: loanTokenValueInUsd };
 
+    // Overlay live exit-liquidity (warmed via Kyberswap) onto the baked collateralTokens.json seed.
+    // Clone info so the shared registry is never mutated; a token not yet swept (cold start) or
+    // whose last sweep was transient keeps its baked slippage. noSwapRoute is never touched here.
+    const warmExit = exitLiquidity[market.collateralToken.address];
+    if (warmExit && market.collateralToken.info) {
+      market.collateralToken.info = { ...market.collateralToken.info, ...warmExit };
+    }
+
     market.defaultLeverageApy = calcLeverageApy(
       market.correlated,
       tokenApy,
@@ -200,6 +211,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     [KEYS.onchainSpUSDG()]: vSpUSDG,
     [KEYS.merkl(chainId)]: vMerkl,
     [KEYS.morphoBorrowHistory(chainId)]: vBorrowHist,
+    [KEYS.exitLiquidity(chainId)]: vExit,
   };
 
   return { chainId, asOf: new Date().toISOString(), markets: composed, views };

@@ -40,6 +40,10 @@ export const POLICY = {
   // On-chain collateral value in loan token (oracle read via viem) — feeds priceUsd + LTVs.
   // Mostly NAV oracles (slow-moving redemption rates); 5m refresh is ample and cuts RPC load.
   onchainCollateralValue: { refreshEverySec: 5 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
+
+  // Exit-liquidity slippage (Kyberswap quote sweep). Expensive and slow-moving; 12h matches the
+  // app's old weekly-ish refresh but automated. 24h stale = one missed cycle of grace.
+  exitLiquidity: { refreshEverySec: 12 * H, staleAfterSec: 24 * H } satisfies WarmPolicy,
 } as const;
 
 // Hard bound on serving last-good data to the APP. The store keeps last-good indefinitely so a
@@ -67,4 +71,5 @@ export const KEYS = {
   merkl: (chainId: number) => `merkl:incentives:${chainId}`,
   prices: (chainId: number) => `prices:coingecko:${chainId}`,
   onchainCollateralValue: (chainId: number) => `onchain:collateralValue:${chainId}`,
+  exitLiquidity: (chainId: number) => `exitLiquidity:${chainId}`,
 } as const;

@@ -13,6 +13,7 @@ import { KEYS } from "../../src/cache/policy.ts";
 import { readMarkets } from "../../src/data/markets.ts";
 import { buildStrategies } from "../../src/core/strategy.ts";
 import { calcLeverage, calcLeverageApy } from "../../src/core/leverage.ts";
+import { exitLiquidityTier } from "../../src/core/exitLiquidity.ts";
 import type { MorphoMarketData } from "../../src/sources/morpho.ts";
 
 const CHAIN = 1;
@@ -118,12 +119,15 @@ describe("strategy composition (seeded fixture)", () => {
     const env = buildStrategies(CHAIN);
     const s = env.strategies.find((x) => x.id === m0.morphoMarketId)!;
 
-    // raw facts
+    // raw facts — derived from the source token config, so a `refresh:liquidity` (which changes
+    // the slippage numbers) never breaks this test; it asserts the mapping, not a magic value.
+    const info = m0.collateralToken.info!;
+    const exp100k = info.exitSlippage100k == null ? null : BigNumber(info.exitSlippage100k).toFixed(2);
     expect(s.exitLiquidity.measured).toBe(true);
-    expect(s.exitLiquidity.slippagePct?.["100000"]).toBe("0.51");
+    expect(s.exitLiquidity.slippagePct?.["100000"]).toBe(exp100k);
     expect(s.exitLiquidity.asOf).toBeTruthy();
     // the ONLY verdict lives in spiralHints and always carries its thresholds
-    expect(s.spiralHints?.exitLiquidityTier?.value).toBe("deep");
+    expect(s.spiralHints?.exitLiquidityTier?.value).toBe(exitLiquidityTier(info));
     expect(s.spiralHints?.exitLiquidityTier?.thresholds).toEqual({
       listingMaxPct: 2,
       depthCleanMaxPct: 1.5,

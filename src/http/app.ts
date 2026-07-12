@@ -16,6 +16,8 @@ import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { fetchMarketChart } from "../sources/coingecko.ts";
 import { buildAppMarkets } from "./appMarkets.ts";
+import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
+import { buildMcpServer } from "../mcp/server.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
 import { openApiSpec } from "./openapi.ts";
 import type { BorrowHistoryPoint } from "../sources/morpho.ts";
@@ -43,13 +45,14 @@ app.use("*", async (c, next) => {
   });
 });
 
-// ── CORS — public read API, all origins allowed ──
+// ── CORS — public read API, all origins allowed. POST + MCP headers for the /mcp endpoint. ──
 app.use(
   "*",
   cors({
     origin: "*",
-    allowMethods: ["GET", "OPTIONS"],
-    allowHeaders: ["content-type", "x-correlation-id"],
+    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowHeaders: ["content-type", "x-correlation-id", "mcp-session-id", "mcp-protocol-version"],
+    exposeHeaders: ["mcp-session-id"],
   }),
 );
 
@@ -108,11 +111,31 @@ app.get("/", (c) =>
     service: "spiralstake-mcp",
     description: "Composition authority + read API for Spiral Stake strategy data.",
     chainId,
-    endpoints: ["/v1/strategies", "/v1/strategies/:id", "/health", "/ready", "/openapi.json"],
+    endpoints: ["/mcp", "/v1/strategies", "/v1/strategies/:id", "/health", "/ready", "/openapi.json"],
+    mcp: "/mcp",
     docs: "/openapi.json",
   }),
 );
 app.get("/openapi.json", (c) => c.json(openApiSpec()));
+
+// ── MCP (Model Context Protocol) — native tool surface for agents over Streamable HTTP ──
+// Stateless: a fresh server+transport per request (no session state), which suits read-only tools
+// and lets any spec-compliant MCP client (Claude, Cursor, …) connect at this URL.
+app.all("/mcp", async (c) => {
+  const server = buildMcpServer();
+  const transport = new WebStandardStreamableHTTPServerTransport({
+    sessionIdGenerator: undefined,
+    enableJsonResponse: true,
+  });
+  await server.connect(transport);
+  const res = await transport.handleRequest(c.req.raw);
+  // enableJsonResponse buffers the full response, so closing on the next tick can't truncate it.
+  setTimeout(() => {
+    transport.close();
+    server.close();
+  }, 0);
+  return res;
+});
 
 // ── v1: strategies (agents + app) ──
 app.get("/v1/strategies", (c) => {

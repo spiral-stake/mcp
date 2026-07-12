@@ -164,9 +164,13 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   const borrowFresh = freshnessFromView(snapshot.views[KEYS.morphoMarkets(chainId)]);
   const apyKey = apySourceKey(chainId, apySource, market.collateralToken.address);
   const collateralApyFresh = apyKey ? freshnessFromView(snapshot.views[apyKey]) : undefined;
-  const exitFresh: FreshnessGroup | undefined = exitLiquidity.measured
-    ? { asOf: collateralTokensAsOf, staleAfterSec: EXIT_LIQUIDITY_STALE_AFTER_SEC }
-    : undefined;
+  // Prefer the live warmer's freshness; fall back to the baked file mtime until the first sweep.
+  const exitFresh: FreshnessGroup | undefined = !exitLiquidity.measured
+    ? undefined
+    : freshnessFromView(snapshot.views[KEYS.exitLiquidity(chainId)]) ?? {
+        asOf: collateralTokensAsOf,
+        staleAfterSec: EXIT_LIQUIDITY_STALE_AFTER_SEC,
+      };
 
   const collateral: Strategy["collateral"] = {
     address: market.collateralToken.address,
