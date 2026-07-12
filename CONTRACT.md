@@ -5,6 +5,7 @@ The single contract the `../mcp` service produces and both the app (llms.txt/JSO
 ## Conventions
 - APYs/percentages: **strings**, 2-dp (matches BigNumber `toFixed(2)`), suffix `Pct`. USD amounts: numbers, suffix `Usd`.
 - `null` = measured, no value (e.g. no swap route at size). Field **absent** = not measured — an agent must treat as unknown, **not** safe.
+- A **negative** `slippagePct` is price improvement (you receive more than you put in), not an error.
 - Timestamps: ISO-8601 UTC.
 
 ## Refresh cadence (producer)

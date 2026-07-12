@@ -56,7 +56,12 @@ export function readMarkets(chainId: number): Market[] {
     Object.entries(oracleTypes).map(([address, type]) => [address.toLowerCase(), type]),
   );
 
-  return Object.keys(markets).map((marketId) => {
+  return Object.keys(markets)
+    // Non-correlated (leveraged-long) markets are excluded at the root: the app no longer offers
+    // that profile, and their `leverageApyPct` is a sign-flipped carry cost that misleads agents.
+    // Dropping them here means the warmer never fetches Morpho/oracle/price data for them at all.
+    .filter((marketId) => markets[marketId].correlated)
+    .map((marketId) => {
     // Deep-ish clone so the shared registries are never mutated across calls (the app relies
     // on a fresh module import per load; the server keeps them resident, so we copy).
     const market = structuredClone(markets[marketId]);

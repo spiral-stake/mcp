@@ -8,6 +8,7 @@ import { calcLeverage, calcLeverageApy } from "./leverage.ts";
 import { resolveTokenApy, resolveTokenApyHistory, type ApyHistoryPoint, type ApySource } from "./apy.ts";
 import { avgCollateralApyOverDays, computeAvgLeverageApy } from "./leverageApy.ts";
 import { readMarkets } from "../data/markets.ts";
+import { env } from "../config/env.ts";
 import { rawStore, type FreshView } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { isStUSDS, isSpUSDG } from "../sources/onchain.ts";
@@ -165,6 +166,19 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       BigNumber(morphoMarketData.borrowApy).minus(borrowIncentiveApy).toFixed(2),
       market.safeLtv,
     );
+
+    // Data-dependent eligibility (correlation is already guaranteed by readMarkets). Mirrors the
+    // app's filterMarkets: hide markets with no resolved collateral APY (source "none" emits 0),
+    // no DEX swap route, a PT inside the minimum maturity window, or borrow liquidity below the
+    // usable floor. We TAG rather than drop: /v1/strategies hard-filters on this (agents see only
+    // eligible), but /v1/app/markets keeps ineligible markets so the app can still resolve a
+    // portfolio position on one (e.g. a PT that has since crossed into its maturity window).
+    market.visible =
+      Number(market.collateralToken.apy) > 0 &&
+      !market.collateralToken.info?.noSwapRoute &&
+      (!market.collateralToken.isPt ||
+        (market.collateralToken.maturityDaysLeft ?? 0) > env.PT_MINIMUM_MATURITY_DAYS) &&
+      market.liquidityAssetsUsd > env.MIN_BORROWABLE_USD;
 
     const borrowHistory = borrowHistories[market.morphoMarketId] ?? [];
     market.avg30dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, 30, market);

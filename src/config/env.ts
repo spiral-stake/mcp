@@ -40,6 +40,12 @@ const schema = z.object({
     .default("true")
     .transform((s) => s.toLowerCase() !== "false"),
 
+  // Eligibility thresholds — MUST mirror the app's filterMarkets (v2-client Strategies.tsx):
+  // VITE_MIN_BORROWABLE_USD and VITE_PT_MINIMUM_MATURITY_DAYS. Used to hide unusable strategies
+  // from the agent endpoint (/v1/strategies).
+  MIN_BORROWABLE_USD: z.coerce.number().nonnegative().default(10000),
+  PT_MINIMUM_MATURITY_DAYS: z.coerce.number().nonnegative().default(10),
+
   MAINNET_RPC_URL: z.string().url().optional(),
   ROBINHOOD_RPC_URL: z.string().url().optional().or(z.literal("")),
   COINGECKO_API_KEY: z.string().optional(),

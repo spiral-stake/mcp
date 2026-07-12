@@ -250,12 +250,16 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
 
 export function buildStrategies(chainId: number): StrategiesEnvelope {
   const snapshot = composeSnapshot(chainId);
-  const strategies = snapshot.markets.map((cm) => toStrategy(cm, snapshot));
+  // Agents see only eligible strategies (no fake-0 / thin / near-maturity / low-liquidity markets).
+  const strategies = snapshot.markets
+    .filter((cm) => cm.market.visible)
+    .map((cm) => toStrategy(cm, snapshot));
   return { asOf: snapshot.asOf, chainId, count: strategies.length, strategies };
 }
 
 export function buildStrategy(chainId: number, id: string): Strategy | undefined {
   const snapshot = composeSnapshot(chainId);
   const cm = snapshot.markets.find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase());
-  return cm ? toStrategy(cm, snapshot) : undefined;
+  // A single strategy is only agent-visible if eligible — hide an ineligible one behind 404.
+  return cm && cm.market.visible ? toStrategy(cm, snapshot) : undefined;
 }

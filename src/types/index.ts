@@ -66,6 +66,10 @@ export interface Market {
   liqLtv: string;
   maxLtv: string;
   safeLtv: string; // set internally
+  // Eligibility, computed in compose (mirrors the app's filterMarkets). The agent endpoint
+  // (/v1/strategies) serves only visible markets; /v1/app/markets serves all (with this flag) so
+  // the app can still resolve a portfolio position on an ineligible market. Undefined pre-compose.
+  visible?: boolean;
   defaultLeverage: string;
   defaultLeverageApy: string;
   avg30dLeverageApy?: string;
