@@ -5,6 +5,7 @@
 import BigNumber from "bignumber.js";
 import { env } from "../config/env.ts";
 import { log } from "../config/logger.ts";
+import { captureError } from "../config/sentry.ts";
 import { rawStore, RawStore } from "../cache/store.ts";
 import { KEYS, POLICY, type WarmPolicy } from "../cache/policy.ts";
 import { readMarkets } from "../data/markets.ts";
@@ -26,6 +27,10 @@ import {
   isSpUSDG,
 } from "../sources/onchain.ts";
 import { registries } from "../data/markets.ts";
+
+// Max jobs fetched concurrently during the initial prime — caps the cold-start burst so upstreams
+// (and constrained hosts) aren't hit by every job at once. Steady-state refreshes are unaffected.
+const PRIME_CONCURRENCY = 3;
 
 export interface WarmJob {
   name: string;
@@ -229,13 +234,31 @@ export class Warmer {
       const msg = e instanceof Error ? e.message : String(e);
       this.store.setError(job.key, msg, job.policy.staleAfterSec);
       log.warn("warm failed (serving last-good)", { job: job.name, key: job.key, error: msg });
+      // Non-required jobs flap transiently (expected — served last-good); only a REQUIRED job
+      // failing threatens availability (it can flip /ready and, past grace, fail-close reads).
+      if (job.required) captureError(e, { job: job.name, key: job.key });
     }
   }
 
-  /** Fetch every job once (initial prime). Resolves after all settle. */
+  /**
+   * Fetch every job once (initial prime). REQUIRED jobs are primed first and alone so they get a
+   * clean shot at their upstreams (and /ready flips ASAP); the rest follow with bounded concurrency.
+   * Firing all jobs at once was a cold-start thundering herd that flaked upstreams (e.g. the Morpho
+   * markets fetch) — especially now the exit-liquidity job fans out ~hundreds of quotes.
+   */
   async primeOnce(): Promise<void> {
     if (this.jobs.length === 0) this.jobs = this.buildJobs();
-    await Promise.allSettled(this.jobs.map((job) => this.runJob(job)));
+    await this.primeBatch(this.jobs.filter((j) => j.required), PRIME_CONCURRENCY);
+    await this.primeBatch(this.jobs.filter((j) => !j.required), PRIME_CONCURRENCY);
+  }
+
+  /** Run a set of jobs with at most `limit` in flight. runJob never throws (it catches internally). */
+  private async primeBatch(jobs: WarmJob[], limit: number): Promise<void> {
+    let next = 0;
+    const worker = async () => {
+      while (next < jobs.length) await this.runJob(jobs[next++]);
+    };
+    await Promise.all(Array.from({ length: Math.min(limit, jobs.length) }, worker));
   }
 
   /** Prime once, then schedule each job on its cadence. Idempotent. */

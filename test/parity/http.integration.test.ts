@@ -49,6 +49,16 @@ describe("http surface", () => {
     expect(res.headers.get("x-correlation-id")).toBeTruthy();
   });
 
+  // The chart proxy takes caller-supplied coinId/currency; they must be validated (charset +
+  // bounds) BEFORE any upstream call, so junk input can't reach CoinGecko or grow the cache.
+  it("GET /v1/prices/chart rejects junk coinId/currency/days with 400 (no upstream call)", async () => {
+    for (const q of ["", "coinId=bad id", "coinId=x&currency=us d", "coinId=x&days=-1", "coinId=x&days=99999"]) {
+      const res = await app.request(`/v1/prices/chart?${q}`);
+      expect(res.status).toBe(400);
+      expect(((await res.json()) as any).error.code).toBe("bad_request");
+    }
+  });
+
   // The app caches this response for 30 minutes, so an empty 200 during a cold start would
   // poison its cache long after recovery. It must 503 instead (the dashboard's old behaviour).
   describe("GET /v1/stable-apy", () => {

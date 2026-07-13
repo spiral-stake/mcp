@@ -53,6 +53,10 @@ const schema = z.object({
   // StableWatch is fetched directly (the mcp owns /apy now). Optional: absent → the stable-APY
   // group degrades to last-good/empty rather than blocking boot.
   STABLEWATCH_API_KEY: z.string().optional(),
+
+  // Error reporting (optional — absent = disabled, logs only).
+  SENTRY_DSN: z.string().optional(),
+  SENTRY_ENVIRONMENT: z.string().default("production"),
 });
 
 const parsed = schema.safeParse(process.env);

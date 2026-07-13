@@ -20,6 +20,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { buildMcpServer } from "../mcp/server.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
 import { openApiSpec } from "./openapi.ts";
+import { captureError } from "../config/sentry.ts";
 import type { BorrowHistoryPoint } from "../sources/morpho.ts";
 import type { MerklIncentiveData } from "../sources/merkl.ts";
 
@@ -59,11 +60,17 @@ app.use(
 // ── error handling ──
 app.onError((err, c) => {
   const log = c.get("log");
+  const cid = c.get("cid");
   if (err instanceof ApiError) {
-    if (err.code === "internal") log?.error("api error", { code: err.code, message: err.message });
+    // Only 5xx-class internal errors are our fault; 4xx (bad_request/not_found) are client input.
+    if (err.code === "internal") {
+      log?.error("api error", { code: err.code, message: err.message });
+      captureError(err, { cid, path: c.req.path });
+    }
     return errorResponse(c, err);
   }
   log?.error("unhandled error", { message: err instanceof Error ? err.message : String(err) });
+  captureError(err, { cid, path: c.req.path });
   return errorResponse(c, new ApiError("internal", "Internal server error"));
 });
 
@@ -229,21 +236,39 @@ app.get("/v1/prices", (c) => {
 });
 
 // ── v1: app-surface — CoinGecko price chart (ON-DEMAND proxy, small TTL cache) ──
+// `coinId`/`currency` are caller-supplied, so the cache MUST be bounded or it becomes an unbounded
+// memory sink (a client spraying distinct coinIds). Bounded LRU: on insert, evict expired entries,
+// then the oldest until under MAX. Input is also validated to a conservative charset + allowlist.
 const chartCache = new Map<string, { at: number; data: unknown }>();
 const CHART_TTL_MS = 5 * 60 * 1000;
+const CHART_CACHE_MAX = 500;
+const ID_RE = /^[a-z0-9][a-z0-9-]{0,63}$/i; // CoinGecko ids / currency codes are short slugs
+
+function chartCacheSet(key: string, data: unknown) {
+  const now = Date.now();
+  for (const [k, v] of chartCache) if (now - v.at >= CHART_TTL_MS) chartCache.delete(k);
+  chartCache.set(key, { at: now, data });
+  while (chartCache.size > CHART_CACHE_MAX) {
+    const oldest = chartCache.keys().next().value; // Map preserves insertion order → oldest first
+    if (oldest === undefined) break;
+    chartCache.delete(oldest);
+  }
+}
+
 app.get("/v1/prices/chart", async (c) => {
   const coinId = c.req.query("coinId");
   const days = Number(c.req.query("days") ?? "7");
   const currency = c.req.query("currency") ?? "usd";
-  if (!coinId) throw new ApiError("bad_request", "coinId query param is required");
-  if (!Number.isFinite(days) || days <= 0) throw new ApiError("bad_request", "days must be a positive number");
+  if (!coinId || !ID_RE.test(coinId)) throw new ApiError("bad_request", "valid coinId query param is required");
+  if (!ID_RE.test(currency)) throw new ApiError("bad_request", "invalid currency");
+  if (!Number.isFinite(days) || days <= 0 || days > 3650) throw new ApiError("bad_request", "days must be 1..3650");
 
   const key = `${coinId}:${days}:${currency}`;
   const hit = chartCache.get(key);
   if (hit && Date.now() - hit.at < CHART_TTL_MS) return c.json(hit.data as object);
   try {
     const data = await fetchMarketChart(coinId, days, currency);
-    chartCache.set(key, { at: Date.now(), data });
+    chartCacheSet(key, data);
     return c.json(data);
   } catch (e) {
     throw new ApiError("upstream_unavailable", `CoinGecko chart unavailable: ${e instanceof Error ? e.message : String(e)}`);

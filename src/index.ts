@@ -3,10 +3,12 @@
 import { serve } from "@hono/node-server";
 import { env } from "./config/env.ts";
 import { log } from "./config/logger.ts";
+import { initSentry, flushSentry, captureError } from "./config/sentry.ts";
 import { app } from "./http/app.ts";
 import { warmer } from "./warmer/index.ts";
 
 async function main() {
+  initSentry(); // as early as possible so boot/warmer errors are captured
   log.info("boot", { chainId: env.CHAIN_ID, port: env.PORT, warmer: env.WARMER_ENABLED });
 
   // Kick off warming in the background; the server comes up immediately and reports /ready=false
@@ -20,14 +22,16 @@ async function main() {
   const shutdown = (signal: string) => {
     log.info("shutting down", { signal });
     warmer.stop();
-    server.close(() => process.exit(0));
+    server.close(() => void flushSentry().then(() => process.exit(0)));
     setTimeout(() => process.exit(0), 5000).unref();
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 }
 
-main().catch((e) => {
+main().catch(async (e) => {
   log.error("fatal boot error", { error: e instanceof Error ? e.stack : String(e) });
+  captureError(e, { phase: "boot" });
+  await flushSentry();
   process.exit(1);
 });
