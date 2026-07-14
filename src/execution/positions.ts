@@ -22,7 +22,9 @@ interface RawPosition {
 }
 
 export interface LeveragePositionView {
-  id: number; // index into the user's on-chain position array
+  id: number; // index into the user's on-chain position array (per chain+contract — NOT globally unique)
+  positionId: string; // globally-unique composite: `${chainId}-${strategyId}-${id}` (safe to merge across chains)
+  chainId: number;
   strategyId: string; // morpho market id
   open: boolean;
   liquidated: boolean;
@@ -95,6 +97,8 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
 
     return {
       id,
+      positionId: `${chainId}-${market.morphoMarketId}-${id}`,
+      chainId,
       strategyId: market.morphoMarketId,
       open: pos.open,
       liquidated,

@@ -8,15 +8,26 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import BigNumber from "bignumber.js";
-import { env } from "../config/env.ts";
 import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { simulateLeverage, buildLeverageTx } from "../execution/buildLeverage.ts";
 import { getUserPositions } from "../execution/positions.ts";
 import { captureError } from "../config/sentry.ts";
+import { PRIMARY_CHAIN_ID, SUPPORTED_CHAIN_IDS, isSupportedChain } from "../config/chains.ts";
 
-const chainId = env.CHAIN_ID;
+// Tools accept an optional chainId (the MCP transport is stateless, so the chain is a tool argument).
+const chainIdSchema = z
+  .number()
+  .int()
+  .optional()
+  .describe(`Chain to target. Supported: ${SUPPORTED_CHAIN_IDS.join(", ")}. Default: ${PRIMARY_CHAIN_ID}.`);
+
+function resolveChain(id?: number): number {
+  if (id == null) return PRIMARY_CHAIN_ID;
+  if (!isSupportedChain(id)) throw new Error(`Unsupported chainId ${id}. Supported: ${SUPPORTED_CHAIN_IDS.join(", ")}`);
+  return id;
+}
 
 // MCP tool results are content blocks; we return the data as a JSON text block (agents parse it).
 function jsonResult(data: unknown) {
@@ -39,9 +50,10 @@ async function runExecution<T>(tool: string, fn: () => Promise<T>) {
   }
 }
 
-const INSTRUCTIONS = `Spiral Stake exposes leveraged-yield ("looping") strategies on Ethereum mainnet, \
-powered by Morpho. Every field is a raw, unit-labeled fact — the only opinion is namespaced under \
-'spiralHints' and always ships its thresholds, so you can override it.
+const INSTRUCTIONS = `Spiral Stake exposes leveraged-yield ("looping") strategies powered by Morpho. \
+Ethereum mainnet is the default; pass chainId to target another supported chain (see a tool's chainId \
+field). Every field is a raw, unit-labeled fact — the only opinion is namespaced under 'spiralHints' \
+and always ships its thresholds, so you can override it.
 
 How to read the facts (mechanics, not advice):
 - carry = collateralApyPct - netBorrowApyPct; leverage multiplies it. Negative carry can still leave \
@@ -76,9 +88,11 @@ export function buildMcpServer(): McpServer {
           .string()
           .optional()
           .describe("Filter by collateral category, e.g. 'stable', 'ETH', 'BTC', 'stable-PT'."),
+        chainId: chainIdSchema,
       },
     },
-    async ({ category }) => {
+    async ({ category, chainId: rawChainId }) => {
+      const chainId = resolveChain(rawChainId);
       const env0 = buildStrategies(chainId);
       const strategies = category
         ? env0.strategies.filter((s) => s.collateral.category === category)
@@ -93,10 +107,11 @@ export function buildMcpServer(): McpServer {
       description: "Get one eligible strategy's full raw facts by its Morpho market id.",
       inputSchema: {
         id: z.string().describe("Morpho market id (0x followed by 64 hex chars)."),
+        chainId: chainIdSchema,
       },
     },
-    async ({ id }) => {
-      const strategy = buildStrategy(chainId, id);
+    async ({ id, chainId: rawChainId }) => {
+      const strategy = buildStrategy(resolveChain(rawChainId), id);
       if (!strategy) {
         return { content: [{ type: "text" as const, text: `No eligible strategy for id ${id}` }], isError: true };
       }
@@ -108,10 +123,10 @@ export function buildMcpServer(): McpServer {
     "get_prices",
     {
       description: "Current USD prices for loan/collateral tokens (token address -> USD).",
-      inputSchema: {},
+      inputSchema: { chainId: chainIdSchema },
     },
-    async () => {
-      const view = rawStore.view<Record<string, BigNumber>>(KEYS.prices(chainId));
+    async ({ chainId: rawChainId }) => {
+      const view = rawStore.view<Record<string, BigNumber>>(KEYS.prices(resolveChain(rawChainId)));
       const prices: Record<string, number> = {};
       for (const [address, p] of Object.entries(view?.value ?? {})) {
         prices[address] = p instanceof BigNumber ? p.toNumber() : Number(p);
@@ -135,6 +150,7 @@ export function buildMcpServer(): McpServer {
     leverage: z.number().positive().optional().describe("Target leverage, e.g. 3. Provide this OR desiredLtv."),
     desiredLtv: z.string().optional().describe("Target LTV percent, e.g. '66.67'. Provide this OR leverage."),
     slippage: z.number().positive().optional().describe("Swap slippage as a ratio (0.005 = 0.5%). Default 0.005, capped at 0.01."),
+    chainId: chainIdSchema,
   };
 
   server.registerTool(
@@ -147,7 +163,7 @@ export function buildMcpServer(): McpServer {
         "market liquidity) the public-allocator reallocation fee. Numbers move with market prices.",
       inputSchema: leverageInput,
     },
-    async (input) => runExecution("simulate_leverage", () => simulateLeverage({ chainId, ...input })),
+    async (input) => runExecution("simulate_leverage", () => simulateLeverage({ ...input, chainId: resolveChain(input.chainId) })),
   );
 
   server.registerTool(
@@ -163,7 +179,7 @@ export function buildMcpServer(): McpServer {
         userAddress: z.string().describe("The wallet address that will sign and send. Approvals and onBehalfOf are built for it."),
       },
     },
-    async (input) => runExecution("build_leverage_tx", () => buildLeverageTx({ chainId, ...input })),
+    async (input) => runExecution("build_leverage_tx", () => buildLeverageTx({ ...input, chainId: resolveChain(input.chainId) })),
   );
 
   server.registerTool(
@@ -176,14 +192,17 @@ export function buildMcpServer(): McpServer {
         "P&L (those need off-chain history). Newest first.",
       inputSchema: {
         userAddress: z.string().describe("Wallet address to read positions for."),
+        chainId: chainIdSchema,
       },
     },
-    async ({ userAddress }) =>
-      runExecution("get_positions", async () => ({
+    async ({ userAddress, chainId: rawChainId }) => {
+      const chainId = resolveChain(rawChainId);
+      return runExecution("get_positions", async () => ({
         chainId,
         userAddress,
         positions: await getUserPositions(chainId, userAddress),
-      })),
+      }));
+    },
   );
 
   return server;

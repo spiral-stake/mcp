@@ -10,6 +10,7 @@
     "website": "https://spark.fi/",
     "twitter": "https://x.com/sparkdotfi",
     "project": "Spark",
+    "noSwapRoute": true,
     "exitSlippage100k": null,
     "exitSlippage500k": null,
     "exitSlippage1M": null,

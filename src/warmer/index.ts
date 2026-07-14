@@ -4,6 +4,7 @@
 // upstream degrades a field-group's freshness rather than dropping it.
 import BigNumber from "bignumber.js";
 import { env } from "../config/env.ts";
+import { PRIMARY_CHAIN_ID, SUPPORTED_CHAIN_IDS } from "../config/chains.ts";
 import { log } from "../config/logger.ts";
 import { captureError } from "../config/sentry.ts";
 import { rawStore, RawStore } from "../cache/store.ts";
@@ -303,4 +304,40 @@ export class Warmer {
   }
 }
 
-export const warmer = new Warmer(env.CHAIN_ID);
+// Coordinator over one Warmer per supported chain. Preserves the single-warmer surface the rest of
+// the service calls (start/stop/primeOnce), and adds a chainId argument to the readiness checks so a
+// per-request handler can gate on the chain it is actually serving. A secondary chain degrading
+// (e.g. its upstreams are down) never blocks the primary — isReady()/readiness() default to primary.
+class MultiChainWarmer {
+  private readonly warmers = new Map<number, Warmer>();
+
+  constructor(chainIds: number[]) {
+    for (const id of chainIds) this.warmers.set(id, new Warmer(id));
+  }
+
+  private all(): Warmer[] {
+    return [...this.warmers.values()];
+  }
+
+  async primeOnce(): Promise<void> {
+    await Promise.all(this.all().map((w) => w.primeOnce()));
+  }
+
+  async start(): Promise<void> {
+    await Promise.all(this.all().map((w) => w.start()));
+  }
+
+  stop(): void {
+    for (const w of this.all()) w.stop();
+  }
+
+  isReady(chainId: number = PRIMARY_CHAIN_ID): boolean {
+    return this.warmers.get(chainId)?.isReady() ?? false;
+  }
+
+  readiness(chainId: number = PRIMARY_CHAIN_ID) {
+    return this.warmers.get(chainId)?.readiness() ?? [];
+  }
+}
+
+export const warmer = new MultiChainWarmer(SUPPORTED_CHAIN_IDS);

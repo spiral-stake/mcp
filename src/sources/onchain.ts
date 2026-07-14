@@ -90,6 +90,9 @@ function getRobinhoodClient(): PublicClient | undefined {
       name: "Robinhood Chain",
       nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
       rpcUrls: { default: { http: [env.ROBINHOOD_RPC_URL] } },
+      // Multicall3 is deployed at the canonical address on Robinhood; viem only uses it for
+      // client.multicall() when the chain declares it (it won't assume the canonical address).
+      contracts: { multicall3: { address: "0xcA11bde05977b3631167028862bE2a173976CA11" } },
     });
     robinhoodClient = createPublicClient({ chain: robinhood, transport: http(env.ROBINHOOD_RPC_URL) });
   }
@@ -134,7 +137,7 @@ export async function fetchAllCollateralValuesInLoanToken(
 ): Promise<Record<string, BigNumber>> {
   if (chainId === 31337) chainId = 1;
   const flashLeverageAddress = readAddresses(chainId).flashLeverageAddress as string;
-  const client = getMainnetClient();
+  const client = getClient(chainId); // per-chain: mainnet oracle reads on 1, Robinhood on 4663
 
   const contracts = markets.map((market) => ({
     address: flashLeverageAddress as `0x${string}`,

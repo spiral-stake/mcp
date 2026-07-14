@@ -2,11 +2,11 @@
 // validation, CORS, the error envelope, and per-request correlation ids. All numbers come from
 // `core` (composed from warm raw); handlers never fetch upstreams (except the explicitly
 // on-demand CoinGecko price-chart proxy, which is separate from the warmed core).
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { cors } from "hono/cors";
 import { randomUUID } from "node:crypto";
 import BigNumber from "bignumber.js";
-import { env } from "../config/env.ts";
+import { PRIMARY_CHAIN_ID, SUPPORTED_CHAIN_IDS, isSupportedChain } from "../config/chains.ts";
 import { childLogger } from "../config/logger.ts";
 import { ApiError, assertMarketId, errorResponse } from "./errors.ts";
 import { rawStore } from "../cache/store.ts";
@@ -25,9 +25,19 @@ import type { BorrowHistoryPoint } from "../sources/morpho.ts";
 import type { MerklIncentiveData } from "../sources/merkl.ts";
 
 type Vars = { cid: string; log: ReturnType<typeof childLogger> };
-const chainId = env.CHAIN_ID;
 
 export const app = new Hono<{ Variables: Vars }>();
+
+// Which chain a request targets: ?chainId (validated against the supported set), default = primary.
+function chainOf(c: Context): number {
+  const raw = c.req.query("chainId");
+  if (raw == null || raw === "") return PRIMARY_CHAIN_ID;
+  const id = Number(raw);
+  if (!Number.isInteger(id) || !isSupportedChain(id)) {
+    throw new ApiError("bad_request", `Unsupported chainId '${raw}'. Supported: ${SUPPORTED_CHAIN_IDS.join(", ")}`);
+  }
+  return id;
+}
 
 // ── correlation id + structured request logging ──
 app.use("*", async (c, next) => {
@@ -74,9 +84,9 @@ app.onError((err, c) => {
   return errorResponse(c, new ApiError("internal", "Internal server error"));
 });
 
-function requireReady() {
-  if (!warmer.isReady()) {
-    throw new ApiError("not_ready", "Service is warming up — required data not yet primed", warmer.readiness());
+function requireReady(chainId: number) {
+  if (!warmer.isReady(chainId)) {
+    throw new ApiError("not_ready", "Service is warming up — required data not yet primed", warmer.readiness(chainId));
   }
 }
 
@@ -85,7 +95,7 @@ function requireReady() {
 // here is worse than serving nothing, so past MAX_STALE_GRACE_SEC we 503 and let the app surface
 // an error. Prices are deliberately excluded — they only affect USD display and are allowed to
 // degrade (see the warmer: `prices` is not a required job).
-function requireFreshMarketData() {
+function requireFreshMarketData(chainId: number) {
   const critical: [string, string][] = [
     ["borrow", KEYS.morphoMarkets(chainId)],
     ["collateralValue", KEYS.onchainCollateralValue(chainId)],
@@ -104,12 +114,13 @@ function requireFreshMarketData() {
 
 // ── liveness / readiness ──
 app.get("/health", (c) =>
-  c.json({ status: "ok", uptimeSec: Math.floor(process.uptime()), chainId, cache: rawStore.stats() }),
+  c.json({ status: "ok", uptimeSec: Math.floor(process.uptime()), chainIds: SUPPORTED_CHAIN_IDS, cache: rawStore.stats() }),
 );
 
 app.get("/ready", (c) => {
-  const ready = warmer.isReady();
-  return c.json({ ready, readiness: warmer.readiness() }, ready ? 200 : 503);
+  const chainId = chainOf(c);
+  const ready = warmer.isReady(chainId);
+  return c.json({ chainId, ready, readiness: warmer.readiness(chainId) }, ready ? 200 : 503);
 });
 
 // ── service info + OpenAPI ──
@@ -117,8 +128,10 @@ app.get("/", (c) =>
   c.json({
     service: "spiralstake-mcp",
     description: "Composition authority + read API for Spiral Stake strategy data.",
-    chainId,
+    chainIds: SUPPORTED_CHAIN_IDS,
+    primaryChainId: PRIMARY_CHAIN_ID,
     endpoints: ["/mcp", "/v1/strategies", "/v1/strategies/:id", "/health", "/ready", "/openapi.json"],
+    note: "All /v1 read endpoints accept ?chainId to target a supported chain (default = primaryChainId).",
     mcp: "/mcp",
     docs: "/openapi.json",
   }),
@@ -146,13 +159,15 @@ app.all("/mcp", async (c) => {
 
 // ── v1: strategies (agents + app) ──
 app.get("/v1/strategies", (c) => {
-  requireReady();
+  const chainId = chainOf(c);
+  requireReady(chainId);
   return c.json(buildStrategies(chainId));
 });
 
 app.get("/v1/strategies/:id", (c) => {
+  const chainId = chainOf(c);
   const id = assertMarketId(c.req.param("id")); // validate before the readiness gate (clearer 400)
-  requireReady();
+  requireReady(chainId);
   const strategy = buildStrategy(chainId, id);
   if (!strategy) throw new ApiError("not_found", `No strategy for market ${id}`);
   return c.json(strategy);
@@ -177,13 +192,15 @@ app.get("/v1/stable-apy", (c) => {
 // ── v1: app-surface — full composed Market[] (raw, tagged BigNumber/bigint) ──
 // The v2-client consumes this to replace its own client-side composition (LTV-independent data).
 app.get("/v1/app/markets", (c) => {
-  requireReady();
-  requireFreshMarketData();
+  const chainId = chainOf(c);
+  requireReady(chainId);
+  requireFreshMarketData(chainId);
   return c.json(buildAppMarkets(chainId));
 });
 
 // ── v1: app-surface — borrow-APY history (charts) ──
 app.get("/v1/markets/borrow-apy-history", (c) => {
+  const chainId = chainOf(c);
   const view = rawStore.view<Record<string, BorrowHistoryPoint[]>>(KEYS.morphoBorrowHistory(chainId));
   return c.json({
     asOf: view?.asOf ?? null,
@@ -193,6 +210,7 @@ app.get("/v1/markets/borrow-apy-history", (c) => {
 });
 
 app.get("/v1/markets/:id/borrow-apy-history", (c) => {
+  const chainId = chainOf(c);
   const id = assertMarketId(c.req.param("id"));
   const view = rawStore.view<Record<string, BorrowHistoryPoint[]>>(KEYS.morphoBorrowHistory(chainId));
   const history = view?.value?.[id] ?? [];
@@ -202,13 +220,15 @@ app.get("/v1/markets/:id/borrow-apy-history", (c) => {
 // ── v1: app-surface — collateral-APY history (charts + windows) ──
 // Keyed by market id, matching how the app keys apyHistories (morphoMarketId).
 app.get("/v1/collateral/apy-history", (c) => {
-  requireReady();
+  const chainId = chainOf(c);
+  requireReady(chainId);
   const snapshot = composeSnapshot(chainId);
   const histories = Object.fromEntries(snapshot.markets.map((m) => [m.market.morphoMarketId, m.apyHistory]));
   return c.json({ asOf: snapshot.asOf, histories });
 });
 
 app.get("/v1/collateral/:id/apy-history", (c) => {
+  const chainId = chainOf(c);
   const id = assertMarketId(c.req.param("id"));
   const snapshot = composeSnapshot(chainId);
   const cm = snapshot.markets.find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase());
@@ -218,6 +238,7 @@ app.get("/v1/collateral/:id/apy-history", (c) => {
 
 // ── v1: app-surface — borrow-incentive history (Merkl) ──
 app.get("/v1/markets/:id/incentive-history", (c) => {
+  const chainId = chainOf(c);
   const id = assertMarketId(c.req.param("id"));
   const view = rawStore.view<MerklIncentiveData>(KEYS.merkl(chainId));
   const history = view?.value?.histories?.[id.toLowerCase()] ?? [];
@@ -226,6 +247,7 @@ app.get("/v1/markets/:id/incentive-history", (c) => {
 
 // ── v1: app-surface — token/loan USD prices ──
 app.get("/v1/prices", (c) => {
+  const chainId = chainOf(c);
   const view = rawStore.view<Record<string, BigNumber>>(KEYS.prices(chainId));
   const raw = view?.value ?? {};
   const prices: Record<string, number> = {};
