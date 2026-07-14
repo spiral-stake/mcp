@@ -57,6 +57,10 @@ const schema = z.object({
   // Error reporting (optional — absent = disabled, logs only).
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default("production"),
+
+  // Execution (C): fee receiver for the 10 bps swap fee (mirrors the app's VITE_FEE_RECEIVER).
+  // Absent → no fee charged (chargeFee falls through), matching the app when unset.
+  FEE_RECEIVER: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);

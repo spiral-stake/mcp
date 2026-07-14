@@ -91,6 +91,18 @@ export interface MarketParams {
   lltv: bigint;
 }
 
+// Public-allocator reallocation (execution). Mirrors the app's types.
+export interface Withdrawal {
+  marketParams: MarketParams;
+  amount: bigint;
+}
+export interface ReallocateParams {
+  vault: string;
+  fee: bigint;
+  withdrawals: Withdrawal[];
+  supplyMarketParams: MarketParams;
+}
+
 export interface LeveragePosition {
   id: number;
   open: boolean;

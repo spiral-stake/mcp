@@ -56,7 +56,7 @@ const flashLeverageAbi = [
 ] as const;
 
 let mainnetClient: PublicClient | undefined;
-function getMainnetClient(): PublicClient {
+export function getMainnetClient(): PublicClient {
   if (!env.MAINNET_RPC_URL) throw new Error("MAINNET_RPC_URL is not configured");
   if (!mainnetClient) {
     mainnetClient = createPublicClient({
@@ -66,6 +66,19 @@ function getMainnetClient(): PublicClient {
     });
   }
   return mainnetClient;
+}
+
+// Chain-aware client for execution reads (allowance, idToMarketParams). 31337 (hardhat fork) reads
+// mainnet state, matching the app. Throws for any chain we don't have an RPC for — fail-closed.
+export function getClient(chainId: number): PublicClient {
+  if (chainId === 31337) chainId = 1;
+  if (chainId === ROBINHOOD_CHAIN_ID) {
+    const client = getRobinhoodClient();
+    if (!client) throw new Error("ROBINHOOD_RPC_URL is not configured");
+    return client;
+  }
+  if (chainId === 1) return getMainnetClient();
+  throw new Error(`No RPC configured for chainId ${chainId}`);
 }
 
 let robinhoodClient: PublicClient | undefined;

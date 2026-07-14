@@ -59,4 +59,29 @@ if (existsSync(addrDir)) {
   }
 }
 
+// Contract ABIs the execution builder needs (v2-client/src/abi -> mcp/src/abi), same relative paths.
+const ABI_DEST = join(here, "../src/abi");
+const ABIS = [
+  "IERC20.sol/IERC20.json",
+  "FlashLeverage.sol/FlashLeverage.json",
+  "FlashLeverageRouter.sol/FlashLeverageRouter.json",
+  "IMorpho.sol/IMorpho.json",
+];
+for (const rel of ABIS) {
+  const from = join(APP, "abi", rel);
+  const to = join(ABI_DEST, rel);
+  if (!existsSync(from)) {
+    console.warn(`[sync-data] missing abi ${rel} — skipped`);
+    continue;
+  }
+  const src = readFileSync(from, "utf8");
+  const prev = existsSync(to) ? readFileSync(to, "utf8") : null;
+  if (src !== prev) {
+    mkdirSync(dirname(to), { recursive: true });
+    writeFileSync(to, src);
+    changed++;
+    console.log(`[sync-data] updated abi/${rel}`);
+  }
+}
+
 console.log(`[sync-data] done — ${changed} file(s) updated.`);
