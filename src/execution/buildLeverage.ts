@@ -140,7 +140,7 @@ interface PreparedLeverage {
 
 // Resolve payToken -> {address, symbol, decimals, isNative}. Known tokens (collateral, loan, ETH)
 // resolve locally; anything else is read on-chain (decimals + symbol). Fail-closed on bad addresses.
-async function resolvePayToken(chainId: number, market: Market, payToken: string): Promise<ResolvedToken> {
+export async function resolvePayToken(chainId: number, market: Market, payToken: string): Promise<ResolvedToken> {
   const addr = payToken.toLowerCase();
   const ethAddress = (readToken(chainId, "ETH")?.address ?? ZERO).toLowerCase();
   if (addr === ethAddress || addr === ZERO)

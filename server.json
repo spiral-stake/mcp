@@ -1,0 +1,17 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-07-09/server.json",
+  "name": "xyz.spiralstake/leverage",
+  "description": "Leverage-aware yield router for Ethereum + Robinhood Chain. Discover looping strategies (raw risk facts), simulate positions, and get UNSIGNED transactions to open/manage/close leverage — non-custodial, the server never signs or holds keys.",
+  "version": "0.1.0",
+  "websiteUrl": "https://app.spiralstake.xyz",
+  "repository": {
+    "url": "https://github.com/spiralstake/spiral-stake",
+    "source": "github"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.spiralstake.xyz/mcp"
+    }
+  ]
+}

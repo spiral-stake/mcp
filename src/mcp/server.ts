@@ -12,6 +12,7 @@ import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { simulateLeverage, buildLeverageTx } from "../execution/buildLeverage.ts";
+import { buildManageTx } from "../execution/buildManage.ts";
 import { getUserPositions } from "../execution/positions.ts";
 import { captureError } from "../config/sentry.ts";
 import { PRIMARY_CHAIN_ID, SUPPORTED_CHAIN_IDS, isSupportedChain } from "../config/chains.ts";
@@ -203,6 +204,34 @@ export function buildMcpServer(): McpServer {
         positions: await getUserPositions(chainId, userAddress),
       }));
     },
+  );
+
+  server.registerTool(
+    "build_manage_tx",
+    {
+      description:
+        "Build the UNSIGNED transaction to adjust or close an OPEN position, for the given wallet to sign. " +
+        "Non-custodial (never signs/holds keys). Returns { approvals[], tx{to,data,value} }. Actions: " +
+        "'close' (unwind fully), 'increase_leverage' (borrow to a higher LTV), 'add_collateral' (top up — " +
+        "pay in collateral or any token), 'remove_collateral' (withdraw), 'repay' (pay down debt; set full=true " +
+        "to clear it), 'borrow' (draw more loan token). Get the position `id` from get_positions. Swap calldata " +
+        "(close/increase/zap paths) is time-sensitive — see meta.expiresAt.",
+      inputSchema: {
+        userAddress: z.string().describe("Wallet that owns the position and will sign."),
+        id: z.number().int().nonnegative().describe("On-chain position index, from get_positions (its `id`)."),
+        action: z
+          .enum(["close", "increase_leverage", "add_collateral", "remove_collateral", "repay", "borrow"])
+          .describe("What to do to the position."),
+        amount: z.string().optional().describe("Human-units amount. Required for add_collateral/remove_collateral/repay/borrow."),
+        payToken: z.string().optional().describe("Token to pay in (add_collateral/repay). Collateral/loan = direct; any other = zapped. ETH = zero address."),
+        full: z.boolean().optional().describe("repay only: clear the entire remaining debt."),
+        desiredLtv: z.string().optional().describe("increase_leverage: target LTV percent (e.g. '80'). Provide this OR leverage."),
+        leverage: z.number().positive().optional().describe("increase_leverage: target leverage. Provide this OR desiredLtv."),
+        slippage: z.number().positive().optional().describe("Swap slippage ratio (0.005 = 0.5%). Default 0.005, capped at 0.01."),
+        chainId: chainIdSchema,
+      },
+    },
+    async (input) => runExecution("build_manage_tx", () => buildManageTx({ ...input, chainId: resolveChain(input.chainId) })),
   );
 
   return server;

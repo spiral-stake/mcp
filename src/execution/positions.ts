@@ -10,6 +10,7 @@ import { calcLeverageApy } from "../core/leverage.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { readAddresses } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
+import type { Market } from "../types/index.ts";
 
 const FLASH_LEVERAGE_ABI = (flashLeverageJson as { abi: Abi }).abi;
 
@@ -39,6 +40,55 @@ export interface LeveragePositionView {
   currentLeverage: string;
   netValueUsd: string; // equity value in USD
   currentLeverageApyPct: string; // leveraged APY at the position's current LTV
+}
+
+// Current state of a single position, for the manage/close builders. Reads the on-chain position
+// (index `id`), its Morpho collateral+debt, and resolves the configured market.
+export interface ManagePosition {
+  market: Market;
+  open: boolean;
+  collateralRaw: bigint; // collateral in token units (for the full-close swap)
+  borrowShares: bigint;
+  amountLeveragedCollateral: BigNumber; // human units — for increase-leverage sizing
+  amountLoan: BigNumber; // human units
+}
+
+export async function readManagePosition(chainId: number, user: string, id: number): Promise<ManagePosition> {
+  const flashLeverageAddress = readAddresses(chainId).flashLeverageAddress as `0x${string}`;
+  const client = getClient(chainId);
+
+  const raw = (await client.readContract({
+    abi: FLASH_LEVERAGE_ABI,
+    address: flashLeverageAddress,
+    functionName: "getUserLeveragePosition",
+    args: [user, BigInt(id)],
+  })) as { open: boolean; marketId: string; userProxy: string };
+
+  const market = composeSnapshot(chainId).markets.map((m) => m.market).find((m) => m.morphoMarketId === raw.marketId);
+  if (!market) throw new Error(`Position ${id}: market ${raw.marketId} is not configured`);
+
+  const mp = (await client.readContract({
+    abi: FLASH_LEVERAGE_ABI,
+    address: flashLeverageAddress,
+    functionName: "getMorphoPosition",
+    args: [raw.userProxy, market.marketParams],
+  })) as { borrowShares: bigint; collateral: bigint };
+
+  const loanRaw = (await client.readContract({
+    abi: FLASH_LEVERAGE_ABI,
+    address: flashLeverageAddress,
+    functionName: "getSharesValueInLoanToken",
+    args: [market.marketParams, mp.borrowShares],
+  })) as bigint;
+
+  return {
+    market,
+    open: raw.open,
+    collateralRaw: mp.collateral,
+    borrowShares: mp.borrowShares,
+    amountLeveragedCollateral: formatUnits(mp.collateral, market.collateralToken.decimals),
+    amountLoan: formatUnits(loanRaw, market.loanToken.decimals),
+  };
 }
 
 export async function getUserPositions(chainId: number, user: string): Promise<LeveragePositionView[]> {

@@ -62,7 +62,7 @@ describe("MCP /mcp endpoint", () => {
   it("tools/list exposes the read tools", async () => {
     const { json } = await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} });
     const names = (json.result.tools as { name: string }[]).map((t) => t.name).sort();
-    expect(names).toEqual(["build_leverage_tx", "get_positions", "get_prices", "get_strategy", "list_strategies", "simulate_leverage"]);
+    expect(names).toEqual(["build_leverage_tx", "build_manage_tx", "get_positions", "get_prices", "get_strategy", "list_strategies", "simulate_leverage"]);
   });
 
   it("tools/call get_strategy returns the strategy's raw facts", async () => {
