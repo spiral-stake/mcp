@@ -30,6 +30,8 @@ loadDotEnv();
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(8787),
   CHAIN_ID: z.coerce.number().int().positive().default(1),
+  // Web app base URL — used to build the human "sign in your wallet" deep-link on execution bundles.
+  APP_URL: z.string().url().default("https://app.spiralstake.xyz"),
   LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("info"),
   CORS_ORIGINS: z
     .string()

@@ -17,11 +17,13 @@ import { type Abi, encodeFunctionData } from "viem";
 import flashLeverageJson from "../abi/FlashLeverage.sol/FlashLeverage.json" with { type: "json" };
 import flashLeverageRouterJson from "../abi/FlashLeverageRouter.sol/FlashLeverageRouter.json" with { type: "json" };
 import { calcIncreaseLeverageFlashLoanAmount } from "../core/leverage.ts";
+import { assertMarketDataFresh } from "../core/freshness.ts";
 import { parseUnits } from "../core/formatUnits.ts";
 import { readAddresses } from "../data/markets.ts";
 import { getSwapData } from "./swap.ts";
 import { buildApproveCalls, type Call } from "./approve.ts";
 import { resolvePayToken, type ResolvedToken } from "./buildLeverage.ts";
+import { portfolioSigningUrl } from "./appLink.ts";
 import { readManagePosition, type ManagePosition } from "./positions.ts";
 import type { LeveragePosition } from "../types/index.ts";
 
@@ -65,6 +67,8 @@ export interface ManageTxBundle {
     minTokenOut?: string;
     slippage: number;
     expiresAt: string;
+    /** One-click handoff: open this in a browser to sign in your own wallet via the Spiral app. */
+    signingUrl: string;
     instructions: string;
   };
 }
@@ -91,6 +95,7 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
 
   const pos: ManagePosition = await readManagePosition(chainId, userAddress, id);
   if (!pos.open) throw new Error(`Position ${id} is already closed`);
+  assertMarketDataFresh(chainId); // fail-closed: never adjust a position off stale market data
   const { market } = pos;
   const collateral = market.collateralToken;
   const loan = market.loanToken;
@@ -208,9 +213,11 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
       minTokenOut: minTokenOut?.toString(),
       slippage,
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      signingUrl: portfolioSigningUrl(chainId, id),
       instructions:
-        `Non-custodial: built for ${userAddress}; that wallet must sign. ` +
-        `Send ${approvals.length} approval(s) first (if any), then the tx. ` +
+        `To execute: either open meta.signingUrl to manage this position and sign in your own wallet ` +
+        `via the Spiral app (recommended), or sign the raw payload yourself. Non-custodial: built for ` +
+        `${userAddress}; that wallet must sign. ${approvals.length} approval(s) first (if any), then the tx. ` +
         (hasSwap ? "Embedded swap calldata expires ~60s after build — rebuild if stale. " : "") +
         "Verify with get_positions after it confirms.",
     },

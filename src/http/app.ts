@@ -20,6 +20,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { buildMcpServer } from "../mcp/server.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
 import { openApiSpec } from "./openapi.ts";
+import { rateLimit } from "./rateLimit.ts";
 import serverManifest from "../../server.json" with { type: "json" };
 import { captureError } from "../config/sentry.ts";
 import type { BorrowHistoryPoint } from "../sources/morpho.ts";
@@ -67,6 +68,12 @@ app.use(
     exposeHeaders: ["mcp-session-id"],
   }),
 );
+
+// ── per-IP rate limiting (liveness/discovery left unthrottled for LB probes) ──
+// /mcp is tighter: the build_* tools make live aggregator/RPC calls, so one client mustn't be able
+// to exhaust upstream quotas. /v1 reads are cache-served and cheap, so they get a generous cap.
+app.use("/mcp", rateLimit({ windowMs: 60_000, max: 60, name: "mcp" }));
+app.use("/v1/*", rateLimit({ windowMs: 60_000, max: 300, name: "v1" }));
 
 // ── error handling ──
 app.onError((err, c) => {

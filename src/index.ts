@@ -27,6 +27,22 @@ async function main() {
   };
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
+
+  // Crash resilience for a multi-instance deploy. A stray promise rejection (e.g. a background
+  // warmer fetch) is captured but does NOT kill the node — it keeps serving warm data. An uncaught
+  // exception leaves the process in an unknown state, so we flush telemetry and exit non-zero; with
+  // ≥2 instances behind the load balancer the orchestrator restarts a fresh node with no outage.
+  process.on("unhandledRejection", (reason) => {
+    log.error("unhandledRejection", { error: reason instanceof Error ? reason.stack : String(reason) });
+    captureError(reason, { phase: "unhandledRejection" });
+  });
+  process.on("uncaughtException", (err) => {
+    log.error("uncaughtException", { error: err instanceof Error ? err.stack : String(err) });
+    captureError(err, { phase: "uncaughtException" });
+    warmer.stop();
+    void flushSentry().then(() => process.exit(1));
+    setTimeout(() => process.exit(1), 5000).unref();
+  });
 }
 
 main().catch(async (e) => {

@@ -67,10 +67,14 @@ Only eligible strategies are returned (thin/near-maturity/no-swap-route/zero-APY
 Numbers are a snapshot ('asOf'); they move. This is not financial advice.
 
 Execution is non-custodial. simulate_leverage previews a position (deterministic, no wallet). \
-build_leverage_tx returns an UNSIGNED transaction for the user's own wallet to sign — this server \
-never signs, sends, or holds keys. It auto-selects the open path (direct vs zap-swap, and public- \
-allocator reallocation when liquidity is thin) in the background, just like the app. Always simulate \
-before building, and rebuild if the returned tx's meta.expiresAt has passed.`;
+build_leverage_tx / build_manage_tx return an UNSIGNED transaction for the user's own wallet to sign \
+— this server never signs, sends, or holds keys. It auto-selects the path (direct vs zap-swap, and \
+public-allocator reallocation when liquidity is thin) in the background, just like the app. \
+The canonical output is the executable payload: sign and broadcast approvals[] first, then \
+tx{to,data,value} — directly, with any wallet, signer library, or Safe. meta.signingUrl is an \
+ADDITIONAL convenience for human-driven sessions (a one-click link to review and sign in the app); \
+surface it when a human is in the loop, but autonomous callers should execute the payload. Always \
+simulate before building, and rebuild if meta.expiresAt has passed.`;
 
 export function buildMcpServer(): McpServer {
   const server = new McpServer(
@@ -182,9 +186,10 @@ export function buildMcpServer(): McpServer {
       annotations: { title: "Build Leverage Transaction", readOnlyHint: false, destructiveHint: false },
       description:
         "Build the UNSIGNED transaction to open a leveraged position, for the given wallet to sign. " +
-        "Non-custodial: this server never signs, sends, or holds keys. Returns { approvals[], tx{to,data,value} } " +
-        "plus the same position preview as simulate_leverage. Send any approvals first, then the tx. The " +
-        "embedded swap calldata is time-sensitive (see meta.expiresAt) — rebuild if it goes stale before signing.",
+        "Non-custodial: this server never signs, sends, or holds keys. The canonical output is the executable " +
+        "{ approvals[], tx{to,data,value} } — sign and broadcast it directly (approvals first), plus the same " +
+        "position preview as simulate_leverage. meta.signingUrl is an optional one-click link for a human to " +
+        "sign in their own wallet. The embedded swap calldata is time-sensitive (see meta.expiresAt) — rebuild if stale.",
       inputSchema: {
         ...leverageInput,
         userAddress: z.string().describe("The wallet address that will sign and send. Approvals and onBehalfOf are built for it."),
@@ -225,7 +230,8 @@ export function buildMcpServer(): McpServer {
       annotations: { title: "Build Manage Transaction", readOnlyHint: false, destructiveHint: false },
       description:
         "Build the UNSIGNED transaction to adjust or close an OPEN position, for the given wallet to sign. " +
-        "Non-custodial (never signs/holds keys). Returns { approvals[], tx{to,data,value} }. Actions: " +
+        "Non-custodial (never signs/holds keys). Canonical output is the executable { approvals[], tx{to,data,value} } " +
+        "(sign/broadcast directly); meta.signingUrl is an optional link for a human to sign in their own wallet. Actions: " +
         "'close' (unwind fully), 'increase_leverage' (borrow to a higher LTV), 'add_collateral' (top up — " +
         "pay in collateral or any token), 'remove_collateral' (withdraw), 'repay' (pay down debt; set full=true " +
         "to clear it), 'borrow' (draw more loan token). Get the position `id` from get_positions. Swap calldata " +

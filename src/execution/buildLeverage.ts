@@ -21,11 +21,13 @@ import flashLeverageRouterJson from "../abi/FlashLeverageRouter.sol/FlashLeverag
 import { calcFlashLoanAmount, calcLeverage, calcLeverageApy, calcLtv } from "../core/leverage.ts";
 import { formatUnits, parseUnits } from "../core/formatUnits.ts";
 import { composeSnapshot } from "../core/compose.ts";
+import { assertMarketDataFresh } from "../core/freshness.ts";
 import { readAddresses, readToken } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
 import { getSwapData, type SwapData, type SwapResult } from "./swap.ts";
 import { buildApproveCalls, type Call } from "./approve.ts";
 import { buildReallocateParams } from "./reallocate.ts";
+import { openSigningUrl } from "./appLink.ts";
 import type { Market, ReallocateParams } from "../types/index.ts";
 
 const FLASH_LEVERAGE_ABI = (flashLeverageJson as { abi: Abi }).abi;
@@ -103,6 +105,8 @@ export interface UnsignedTxBundle {
     positionPreview: PositionPreview;
     slippage: number;
     expiresAt: string;
+    /** One-click handoff: open this in a browser to sign in your own wallet via the Spiral app. */
+    signingUrl: string;
     instructions: string;
   };
 }
@@ -179,6 +183,7 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
   const market = cm.market;
   if (!market.correlated) throw new Error("Market is not correlated — not leverageable");
   if (!market.visible) throw new Error("Market is not currently eligible for leverage");
+  assertMarketDataFresh(chainId); // fail-closed: never size a position off stale market data
 
   const addresses = readAddresses(chainId);
   const flashLeverageAddress = addresses.flashLeverageAddress as string;
@@ -333,9 +338,11 @@ export async function buildLeverageTx(input: BuildLeverageInput): Promise<Unsign
       positionPreview: p.preview,
       slippage: p.slippage,
       expiresAt: new Date(Date.now() + 60_000).toISOString(), // swap calldata is time-sensitive
+      signingUrl: openSigningUrl(chainId, input.strategyId, p.desiredLtv, input.amount, payToken.address),
       instructions:
-        `Sign and send ${approvals.length} approval(s) first (if any), then the main tx. ` +
-        `The tx is non-custodial: it was built for ${input.userAddress} and must be signed by that wallet. ` +
+        `To execute: either (a) open meta.signingUrl in a browser to review and sign in your own wallet ` +
+        `via the Spiral app (recommended), or (b) sign the raw payload yourself — ${approvals.length} approval(s) ` +
+        `first (if any), then the tx. Non-custodial: built for ${input.userAddress}; that wallet must sign. ` +
         `Swap calldata expires ~60s after build — rebuild if stale.`,
     },
   };
