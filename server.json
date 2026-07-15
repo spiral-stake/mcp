@@ -2,10 +2,10 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "xyz.spiralstake/leverage",
   "description": "Leveraged-yield router on Morpho. List strategies, simulate, and build UNSIGNED txs.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "websiteUrl": "https://spiralstake.xyz",
   "repository": {
-    "url": "https://github.com/spiralstake/spiral-stake",
+    "url": "https://github.com/spiral-stake/mcp",
     "source": "github"
   },
   "remotes": [
