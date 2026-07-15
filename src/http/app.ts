@@ -20,6 +20,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { buildMcpServer } from "../mcp/server.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
 import { openApiSpec } from "./openapi.ts";
+import serverManifest from "../../server.json" with { type: "json" };
 import { captureError } from "../config/sentry.ts";
 import type { BorrowHistoryPoint } from "../sources/morpho.ts";
 import type { MerklIncentiveData } from "../sources/merkl.ts";
@@ -137,6 +138,10 @@ app.get("/", (c) =>
   }),
 );
 app.get("/openapi.json", (c) => c.json(openApiSpec()));
+
+// Same-origin MCP discovery: a client holding the /mcp URL can find the server descriptor here.
+// Served straight from the registry manifest so it never drifts.
+app.get("/.well-known/mcp.json", (c) => c.json(serverManifest));
 
 // ── MCP (Model Context Protocol) — native tool surface for agents over Streamable HTTP ──
 // Stateless: a fresh server+transport per request (no session state), which suits read-only tools

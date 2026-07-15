@@ -81,6 +81,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "list_strategies",
     {
+      title: "List Strategies",
+      annotations: { title: "List Strategies", readOnlyHint: true },
       description:
         "List eligible Spiral leveraged-yield strategies with raw risk facts (collateral/borrow APY, " +
         "leverage ladder, oracle type, exit-liquidity, LTVs). Optionally filter by collateral category.",
@@ -105,6 +107,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "get_strategy",
     {
+      title: "Get Strategy",
+      annotations: { title: "Get Strategy", readOnlyHint: true },
       description: "Get one eligible strategy's full raw facts by its Morpho market id.",
       inputSchema: {
         id: z.string().describe("Morpho market id (0x followed by 64 hex chars)."),
@@ -123,6 +127,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "get_prices",
     {
+      title: "Get Prices",
+      annotations: { title: "Get Prices", readOnlyHint: true },
       description: "Current USD prices for loan/collateral tokens (token address -> USD).",
       inputSchema: { chainId: chainIdSchema },
     },
@@ -157,6 +163,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "simulate_leverage",
     {
+      title: "Simulate Leverage",
+      annotations: { title: "Simulate Leverage", readOnlyHint: true },
       description:
         "Preview opening a leveraged position — deterministic, read-only, no wallet needed. Returns the " +
         "resulting leverage, effective LTV, leveraged collateral, expected leveraged APY, price impact, " +
@@ -170,6 +178,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "build_leverage_tx",
     {
+      title: "Build Leverage Transaction",
+      annotations: { title: "Build Leverage Transaction", readOnlyHint: false, destructiveHint: false },
       description:
         "Build the UNSIGNED transaction to open a leveraged position, for the given wallet to sign. " +
         "Non-custodial: this server never signs, sends, or holds keys. Returns { approvals[], tx{to,data,value} } " +
@@ -186,6 +196,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "get_positions",
     {
+      title: "Get Positions",
+      annotations: { title: "Get Positions", readOnlyHint: true },
       description:
         "Read a wallet's open/closed Spiral leverage positions from chain state (read-only). For each: " +
         "collateral/loan, leveraged collateral, net equity, debt, current LTV vs liquidation LTV (with " +
@@ -209,6 +221,8 @@ export function buildMcpServer(): McpServer {
   server.registerTool(
     "build_manage_tx",
     {
+      title: "Build Manage Transaction",
+      annotations: { title: "Build Manage Transaction", readOnlyHint: false, destructiveHint: false },
       description:
         "Build the UNSIGNED transaction to adjust or close an OPEN position, for the given wallet to sign. " +
         "Non-custodial (never signs/holds keys). Returns { approvals[], tx{to,data,value} }. Actions: " +
