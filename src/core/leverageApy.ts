@@ -26,6 +26,7 @@ export function computeAvgLeverageApy(
   apyHistory: ApyHistoryPoint[],
   borrowHistory: BorrowHistoryPoint[],
   incentiveHistory: MerklAprRecord[],
+  collateralIncentiveHistory: MerklAprRecord[],
   days: number,
   market: Market,
 ): string | undefined {
@@ -41,14 +42,17 @@ export function computeAvgLeverageApy(
   }
 
   const cutoff = Date.now() - days * 86_400_000;
-  const apyVals = apyHistory.filter((r) => r.ts >= cutoff).map((r) => r.apy);
+  // Each APY point is lifted by the collateral incentive active at that timestamp.
+  const apyVals = apyHistory
+    .filter((r) => r.ts >= cutoff)
+    .map((r) => r.apy + incentiveAprAt(collateralIncentiveHistory, r.ts));
   const netBorrowVals = borrowHistory
     .filter((p) => p.x * 1000 >= cutoff)
     .map((p) => p.y * 100 - incentiveAprAt(incentiveHistory, p.x * 1000));
   const avgCollateralApy =
     apyVals.length > 0
       ? (apyVals.reduce((s, v) => s + v, 0) / apyVals.length).toFixed(2)
-      : market.collateralToken.apy;
+      : BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy).toFixed(2);
   const avgBorrowApy =
     netBorrowVals.length > 0
       ? (netBorrowVals.reduce((s, v) => s + v, 0) / netBorrowVals.length).toFixed(2)

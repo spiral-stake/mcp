@@ -24,7 +24,8 @@ export type MerklSpotIncentives = Record<string, MerklSpotIncentive>; // morphoM
 export interface MerklIncentiveData {
   spot: MerklSpotIncentives; // borrow-side (MORPHOBORROW): offsets borrow cost
   collateralSpot: MerklSpotIncentives; // collateral-side (MORPHOCOLLATERAL): adds to collateral yield
-  histories: MerklIncentiveHistories; // borrow-side APR history only
+  histories: MerklIncentiveHistories; // borrow-side APR history (MORPHOBORROW)
+  collateralHistories: MerklIncentiveHistories; // collateral-side APR history (MORPHOCOLLATERAL)
 }
 
 interface MerklCampaignMeta {
@@ -137,14 +138,21 @@ export const fetchMerklIncentiveData = async (
   const spot = computeSpotIncentives(wantedByMarket, now);
   const collateralSpot = computeSpotIncentives(filterWanted(collByMarket), now);
 
-  const campaignIds = [
+  const wantedCollByMarket = filterWanted(collByMarket);
+
+  const borrowCampaignIds = [
     ...new Set(Object.values(wantedByMarket).flatMap((metas) => metas.map((m) => m.id))),
   ];
-  if (campaignIds.length === 0) return { spot, collateralSpot, histories: {} };
+  const collateralCampaignIds = [
+    ...new Set(Object.values(wantedCollByMarket).flatMap((metas) => metas.map((m) => m.id))),
+  ];
+  const allCampaignIds = [...new Set([...borrowCampaignIds, ...collateralCampaignIds])];
+
+  if (allCampaignIds.length === 0) return { spot, collateralSpot, histories: {}, collateralHistories: {} };
 
   const recordsById: Record<string, MerklAprRecord[]> = {};
   await Promise.all(
-    campaignIds.map(async (id) => {
+    allCampaignIds.map(async (id) => {
       try {
         recordsById[id] = await fetchMerklAprRecords(id);
       } catch {
@@ -159,7 +167,13 @@ export const fetchMerklIncentiveData = async (
       histories[market] = mergeAprRecords(metas.map((m) => recordsById[m.id] ?? []));
     }
   }
-  return { spot, collateralSpot, histories };
+  const collateralHistories: MerklIncentiveHistories = {};
+  for (const [market, metas] of Object.entries(wantedCollByMarket)) {
+    if (metas.length) {
+      collateralHistories[market] = mergeAprRecords(metas.map((m) => recordsById[m.id] ?? []));
+    }
+  }
+  return { spot, collateralSpot, histories, collateralHistories };
 };
 
 const mergeAprRecords = (histories: MerklAprRecord[][]): MerklAprRecord[] =>

@@ -62,7 +62,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
   const allRoyco = vRoyco?.value ?? {};
   const stUSDSApy = vStUSDS?.value;
   const spUSDGApy = vSpUSDG?.value;
-  const merkl = vMerkl?.value ?? { spot: {}, collateralSpot: {}, histories: {} };
+  const merkl = vMerkl?.value ?? { spot: {}, collateralSpot: {}, histories: {}, collateralHistories: {} } as MerklIncentiveData;
   const borrowHistories = vBorrowHist?.value ?? {};
 
   // Loan-token USD defaults to 1 when unpriced (matches the app's `|| BigNumber(1)`); PT-underlying
@@ -133,6 +133,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     const borrowIncentiveBreakdown = spot?.breakdown ?? [];
     const borrowIncentiveUrl = spot?.url || undefined;
     const borrowIncentiveHistory = merkl.histories[marketKey] ?? [];
+    const collateralIncentiveHistory = merkl.collateralHistories?.[marketKey] ?? [];
 
     // ── collateral incentives (Merkl MORPHOCOLLATERAL spot) — extra yield on the supplied collateral ──
     const collSpot = merkl.collateralSpot?.[marketKey]; // optional: warm data may predate this field
@@ -152,6 +153,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       borrowIncentiveBreakdown,
       borrowIncentiveUrl,
       borrowIncentiveHistory,
+      collateralIncentiveHistory,
       collateralIncentiveApy,
       collateralIncentiveBreakdown,
       collateralIncentiveUrl,
@@ -206,9 +208,9 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       market.liquidityAssetsUsd > env.MIN_BORROWABLE_USD;
 
     const borrowHistory = borrowHistories[market.morphoMarketId] ?? [];
-    market.avg30dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, 30, market);
-    market.avg60dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, 60, market);
-    market.avg90dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, 90, market);
+    market.avg30dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, collateralIncentiveHistory, 30, market);
+    market.avg60dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, collateralIncentiveHistory, 60, market);
+    market.avg90dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, collateralIncentiveHistory, 90, market);
 
     composed.push({ market, apySource, apyHistory, borrowHistory });
   }
