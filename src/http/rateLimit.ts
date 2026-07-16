@@ -26,7 +26,10 @@ export function rateLimit(opts: { windowMs: number; max: number; name: string })
 
   return async (c: Context, next: Next) => {
     const now = Date.now();
-    const key = `${opts.name}:${clientKey(c)}`;
+    // A keyed partner gets its own bucket + tier; anonymous traffic falls back to per-IP.
+    const partner = c.get("partner") as { id: string; rateLimitPerMin: number } | undefined;
+    const key = partner ? `partner:${partner.id}` : `${opts.name}:${clientKey(c)}`;
+    const max = partner?.rateLimitPerMin ?? opts.max;
 
     // Opportunistic prune so the map can't grow unbounded with churned IPs.
     if (buckets.size > 10_000) {
@@ -40,12 +43,12 @@ export function rateLimit(opts: { windowMs: number; max: number; name: string })
     }
     w.count++;
 
-    const remaining = Math.max(0, opts.max - w.count);
-    c.header("RateLimit-Limit", String(opts.max));
+    const remaining = Math.max(0, max - w.count);
+    c.header("RateLimit-Limit", String(max));
     c.header("RateLimit-Remaining", String(remaining));
     c.header("RateLimit-Reset", String(Math.ceil((w.resetAt - now) / 1000)));
 
-    if (w.count > opts.max) {
+    if (w.count > max) {
       const retryAfter = Math.ceil((w.resetAt - now) / 1000);
       c.header("Retry-After", String(retryAfter));
       return c.json(

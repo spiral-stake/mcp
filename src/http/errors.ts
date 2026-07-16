@@ -5,6 +5,7 @@ import type { Context } from "hono";
 
 export type ErrorCode =
   | "bad_request"
+  | "unauthorized"
   | "not_found"
   | "not_ready"
   | "upstream_unavailable"
@@ -12,6 +13,7 @@ export type ErrorCode =
 
 const STATUS: Record<ErrorCode, number> = {
   bad_request: 400,
+  unauthorized: 401,
   not_found: 404,
   not_ready: 503,
   upstream_unavailable: 503,
@@ -43,7 +45,7 @@ export function errorResponse(c: Context, err: ApiError) {
   const body: ErrorBody = {
     error: { code: err.code, message: err.message, correlationId, ...(err.details ? { details: err.details } : {}) },
   };
-  return c.json(body, STATUS[err.code] as 400 | 404 | 500 | 503);
+  return c.json(body, STATUS[err.code] as 400 | 401 | 404 | 500 | 503);
 }
 
 const MARKET_ID_RE = /^0x[0-9a-fA-F]{64}$/;

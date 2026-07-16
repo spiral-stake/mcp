@@ -21,12 +21,15 @@ import { buildMcpServer } from "../mcp/server.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
 import { openApiSpec } from "./openapi.ts";
 import { rateLimit } from "./rateLimit.ts";
+import { attachPartner } from "./partnerAuth.ts";
+import { partnerApi } from "./partnerRoutes.ts";
+import type { Partner } from "../partners/registry.ts";
 import serverManifest from "../../server.json" with { type: "json" };
 import { captureError } from "../config/sentry.ts";
 import type { BorrowHistoryPoint } from "../sources/morpho.ts";
 import type { MerklIncentiveData } from "../sources/merkl.ts";
 
-type Vars = { cid: string; log: ReturnType<typeof childLogger> };
+type Vars = { cid: string; log: ReturnType<typeof childLogger>; partner?: Partner };
 
 export const app = new Hono<{ Variables: Vars }>();
 
@@ -69,9 +72,15 @@ app.use(
   }),
 );
 
-// ── per-IP rate limiting (liveness/discovery left unthrottled for LB probes) ──
-// /mcp is tighter: the build_* tools make live aggregator/RPC calls, so one client mustn't be able
-// to exhaust upstream quotas. /v1 reads are cache-served and cheap, so they get a generous cap.
+// ── partner API-key auth (enrich-only) — attaches a partner when a VALID key is present so the rate
+// limiter + handlers can see it; a stray/invalid key is ignored (never 401s public traffic). Scoped
+// to /v1 + /mcp so a liveness probe carrying an auth header can never be rejected. No key = public. ──
+app.use("/mcp", attachPartner);
+app.use("/v1/*", attachPartner);
+
+// ── rate limiting — partner-aware (a keyed partner gets its own tier; anonymous falls back to
+// per-IP). liveness/discovery left unthrottled for LB probes. /mcp is tighter than the cached /v1
+// reads because the build_* tools make live aggregator/RPC calls. ──
 app.use("/mcp", rateLimit({ windowMs: 60_000, max: 60, name: "mcp" }));
 app.use("/v1/*", rateLimit({ windowMs: 60_000, max: 300, name: "v1" }));
 
@@ -168,6 +177,9 @@ app.all("/mcp", async (c) => {
   }, 0);
   return res;
 });
+
+// ── v1: partner integration API (keyed) — the neobank-facing REST surface for simulate/build ──
+app.route("/v1/partner", partnerApi);
 
 // ── v1: strategies (agents + app) ──
 app.get("/v1/strategies", (c) => {

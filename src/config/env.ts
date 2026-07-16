@@ -63,6 +63,11 @@ const schema = z.object({
   // Execution (C): fee receiver for the 10 bps swap fee (mirrors the app's VITE_FEE_RECEIVER).
   // Absent → no fee charged (chargeFee falls through), matching the app when unset.
   FEE_RECEIVER: z.string().optional(),
+
+  // Partner integration API (neobanks). A JSON array of { id, name, keyHash, rateLimitPerMin?, tier? }
+  // where keyHash is the SHA-256 hex of the issued key (raw keys never touch config). Absent/empty →
+  // the partner surface is dormant and the public/agent behaviour is unchanged.
+  PARTNERS_JSON: z.string().optional(),
 });
 
 const parsed = schema.safeParse(process.env);
