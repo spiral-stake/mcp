@@ -102,6 +102,99 @@ export function openApiSpec() {
     description: "Morpho market id.",
   };
 
+  const chainIdQuery = {
+    name: "chainId",
+    in: "query",
+    required: false,
+    schema: { type: "integer", enum: [1, 4663], default: 1 },
+    description: "Chain to target — 1 = Ethereum (default), 4663 = Robinhood Chain.",
+  };
+
+  // ── Partner (integration API) schemas ──
+  const call = { type: "object", properties: { to: { type: "string" }, data: { type: "string" }, value: { type: "string" } }, required: ["to", "data"] };
+  const positionPreview = {
+    type: "object",
+    properties: {
+      leverage: { type: "string", example: "3.0" },
+      requestedLtv: { type: "string", example: "66.67" },
+      effectiveLtv: { type: "string", example: "66.73" },
+      amountLeveragedCollateral: { type: "string" },
+      expectedLeverageApy: { type: "string", example: "5.64" },
+      priceImpactPct: { type: "string", example: "0.07" },
+    },
+  };
+  const unsignedTxBundle = {
+    type: "object",
+    description: "Unsigned transaction bundle. Non-custodial: sign approvals[] first, then tx, from userAddress.",
+    properties: {
+      chainId: { type: "integer" },
+      action: { type: "string", example: "open_leverage" },
+      path: { type: "string", enum: ["leverage", "swapAndLeverage", "reallocateAndLeverage", "reallocateSwapAndLeverage", "deleverage", "increaseLeverage", "supplyCollateral", "swapAndSupplyCollateral", "repay", "swapAndRepay", "withdrawCollateral", "borrow"] },
+      approvals: { type: "array", items: call },
+      tx: call,
+      meta: {
+        type: "object",
+        properties: {
+          positionPreview,
+          amountFlashLoan: { type: "string" },
+          minTokenOut: { type: "string" },
+          slippage: { type: "number" },
+          expiresAt: { type: "string", format: "date-time", description: "Swap calldata is time-sensitive (~60s); rebuild if it lapses." },
+          signingUrl: { type: "string", description: "One-click link to review + sign in the user's own wallet via the Spiral app." },
+          instructions: { type: "string" },
+        },
+      },
+    },
+    required: ["chainId", "action", "path", "approvals", "tx", "meta"],
+  };
+  const simulateResult = {
+    type: "object",
+    properties: {
+      path: { type: "string" }, isDirect: { type: "boolean" }, isReallocate: { type: "boolean" },
+      positionPreview, amountFlashLoan: { type: "string" }, minTokenOut: { type: "string" },
+      reallocationFeeWei: { type: "string", nullable: true }, slippage: { type: "number" }, note: { type: "string" },
+    },
+  };
+  const leverageBody = {
+    type: "object",
+    required: ["strategyId", "payToken", "amount"],
+    properties: {
+      strategyId: { type: "string", description: "Morpho market id (from /v1/strategies)." },
+      payToken: { type: "string", description: "Token to pay in. Collateral (direct) or any token (zapped). ETH = zero address." },
+      amount: { type: "string", description: "Amount of payToken in human units, e.g. '10000'." },
+      leverage: { type: "number", description: "Target leverage (e.g. 3). Provide this OR desiredLtv." },
+      desiredLtv: { type: "string", description: "Target LTV percent (e.g. '66.67'). Provide this OR leverage." },
+      slippage: { type: "number", description: "Ratio, default 0.005, capped at 0.01." },
+      chainId: { type: "integer", enum: [1, 4663] },
+    },
+  };
+  const buildLeverageBody = {
+    allOf: [leverageBody, { type: "object", required: ["userAddress"], properties: { userAddress: { type: "string", description: "Wallet that will sign; approvals + onBehalfOf are built for it." } } }],
+  };
+  const manageBody = {
+    type: "object",
+    required: ["userAddress", "id", "action"],
+    properties: {
+      userAddress: { type: "string" },
+      id: { type: "integer", description: "On-chain position index (from /positions)." },
+      action: { type: "string", enum: ["close", "increase_leverage", "add_collateral", "remove_collateral", "repay", "borrow"] },
+      amount: { type: "string" },
+      payToken: { type: "string" },
+      full: { type: "boolean", description: "repay only: clear the entire remaining debt." },
+      desiredLtv: { type: "string" },
+      leverage: { type: "number" },
+      slippage: { type: "number" },
+      chainId: { type: "integer", enum: [1, 4663] },
+    },
+  };
+  const bearer = [{ bearerAuth: [] }];
+  const partnerErr = {
+    "400": { description: "Invalid input", content: { "application/json": { schema: errorEnvelope } } },
+    "401": { description: "Missing/invalid API key", content: { "application/json": { schema: errorEnvelope } } },
+    "429": { description: "Rate limited", content: { "application/json": { schema: errorEnvelope } } },
+    "503": { description: "Transient (stale data / no route / RPC) — retry", content: { "application/json": { schema: errorEnvelope } } },
+  };
+
   return {
     openapi: "3.1.0",
     info: {
@@ -110,7 +203,14 @@ export function openApiSpec() {
       description:
         "Read-only composition authority for Spiral Stake strategy data. Serves the frozen /strategies contract (agents + app) plus the full app read surface. All numbers are composed from warm cache; a stale/failed upstream serves last-good with a visible stale age.",
     },
-    servers: [{ url: `http://localhost:${env.PORT}` }],
+    servers: [
+      { url: "https://api.spiralstake.xyz", description: "Production" },
+      { url: `http://localhost:${env.PORT}`, description: "Local" },
+    ],
+    tags: [
+      { name: "Public", description: "Open read endpoints — no key required." },
+      { name: "Partner", description: "Keyed integration API — Authorization: Bearer <key>." },
+    ],
     paths: {
       "/health": {
         get: {
@@ -126,7 +226,9 @@ export function openApiSpec() {
       },
       "/v1/strategies": {
         get: {
+          tags: ["Public"],
           summary: "All strategies (frozen contract)",
+          parameters: [chainIdQuery],
           responses: {
             "200": {
               description: "Strategies envelope",
@@ -194,7 +296,46 @@ export function openApiSpec() {
         get: { summary: "Borrow-incentive (Merkl) APR history for one market", parameters: [idParam], responses: { "200": { description: "OK" } } },
       },
       "/v1/prices": {
-        get: { summary: "Latest token/loan USD prices (address → price)", responses: { "200": { description: "OK" } } },
+        get: { tags: ["Public"], summary: "Latest token/loan USD prices (address → price)", parameters: [chainIdQuery], responses: { "200": { description: "OK" } } },
+      },
+      "/v1/partner/leverage/simulate": {
+        post: {
+          tags: ["Partner"],
+          summary: "Preview opening a leveraged position (deterministic, no wallet)",
+          security: bearer,
+          requestBody: { required: true, content: { "application/json": { schema: leverageBody } } },
+          responses: { "200": { description: "Position preview", content: { "application/json": { schema: simulateResult } } }, ...partnerErr },
+        },
+      },
+      "/v1/partner/leverage/build": {
+        post: {
+          tags: ["Partner"],
+          summary: "Build the unsigned open-leverage transaction",
+          security: bearer,
+          requestBody: { required: true, content: { "application/json": { schema: buildLeverageBody } } },
+          responses: { "200": { description: "Unsigned tx bundle", content: { "application/json": { schema: unsignedTxBundle } } }, ...partnerErr },
+        },
+      },
+      "/v1/partner/manage/build": {
+        post: {
+          tags: ["Partner"],
+          summary: "Build the unsigned manage/close transaction for a position",
+          security: bearer,
+          requestBody: { required: true, content: { "application/json": { schema: manageBody } } },
+          responses: { "200": { description: "Unsigned tx bundle", content: { "application/json": { schema: unsignedTxBundle } } }, ...partnerErr },
+        },
+      },
+      "/v1/partner/positions/{address}": {
+        get: {
+          tags: ["Partner"],
+          summary: "A wallet's open/closed positions",
+          security: bearer,
+          parameters: [
+            { name: "address", in: "path", required: true, schema: { type: "string", pattern: "^0x[0-9a-fA-F]{40}$" }, description: "Wallet address." },
+            chainIdQuery,
+          ],
+          responses: { "200": { description: "Positions", content: { "application/json": { schema: { type: "object", properties: { chainId: { type: "integer" }, userAddress: { type: "string" }, positions: { type: "array", items: { type: "object" } } } } } } }, ...partnerErr },
+        },
       },
       "/v1/prices/chart": {
         get: {
@@ -208,6 +349,11 @@ export function openApiSpec() {
         },
       },
     },
-    components: { schemas: { Strategy: strategy, ErrorEnvelope: errorEnvelope } },
+    components: {
+      securitySchemes: {
+        bearerAuth: { type: "http", scheme: "bearer", description: "Partner API key: `Authorization: Bearer <key>`." },
+      },
+      schemas: { Strategy: strategy, ErrorEnvelope: errorEnvelope, UnsignedTxBundle: unsignedTxBundle },
+    },
   } as const;
 }
