@@ -53,7 +53,7 @@ function seedStore() {
     },
     43200,
   );
-  rawStore.setOk(KEYS.merkl(CHAIN), { spot: {}, histories: {} }, 3600);
+  rawStore.setOk(KEYS.merkl(CHAIN), { spot: {}, collateralSpot: {}, histories: {} }, 3600);
   rawStore.setOk(KEYS.morphoBorrowHistory(CHAIN), {}, 3600);
   rawStore.setOk(KEYS.defillamaAll(CHAIN), {}, 43200);
   rawStore.setOk(KEYS.roycoAll(CHAIN), {}, 43200);
@@ -112,6 +112,49 @@ describe("strategy composition (seeded fixture)", () => {
     expect(s.defaultLeverage.ltvPct).toBe("93.5");
     expect(s.defaultLeverage.leverageApyPct).toBe(
       calcLeverageApy(true, COLLATERAL_APY, BORROW_APY, "93.50"),
+    );
+  });
+
+  it("folds a MORPHOCOLLATERAL incentive into the leverage APY and surfaces it as its own block", () => {
+    // Live collateral-side Merkl campaign for the market (mirrors the Robinhood USDe/USDG case).
+    rawStore.setOk(
+      KEYS.merkl(CHAIN),
+      {
+        spot: {},
+        collateralSpot: {
+          [m0.morphoMarketId.toLowerCase()]: {
+            apy: "4.50",
+            breakdown: [{ symbol: "USDe", apy: "4.50" }],
+            url: "https://app.merkl.xyz/opportunities/abc",
+          },
+        },
+        histories: {},
+      },
+      3600,
+    );
+
+    const env = buildStrategies(CHAIN);
+    const s = env.strategies.find((x) => x.id === m0.morphoMarketId)!;
+    expect(s).toBeDefined();
+
+    // base collateral APY is NOT conflated with the incentive
+    expect(s.collateralApyPct).toBe(COLLATERAL_APY); // "10.00"
+
+    // the incentive is surfaced as its own block (same shape as borrowIncentive)
+    expect(s.collateralIncentive).toEqual({
+      aprPct: "4.50",
+      breakdown: [{ symbol: "USDe", aprPct: "4.50" }],
+      campaignUrl: "https://app.merkl.xyz/opportunities/abc",
+    });
+
+    // …and it's folded into the ladder: the 1x rung (0% LTV, no borrow) == base + incentive
+    const effectiveApy = BigNumber(COLLATERAL_APY).plus("4.50").toFixed(2);
+    expect(s.leverageLadder[0].leverageApyPct).toBe(
+      calcLeverageApy(true, effectiveApy, BORROW_APY, "0.00"),
+    );
+    // and it differs from what the base APY alone would give
+    expect(s.leverageLadder[0].leverageApyPct).not.toBe(
+      calcLeverageApy(true, COLLATERAL_APY, BORROW_APY, "0.00"),
     );
   });
 

@@ -30,7 +30,8 @@ const APP_BASE = "https://app.spiralstake.xyz";
 // Integer leverage steps 1x, 2x, … up to floor(maxLeverage), then always append the exact max.
 // Each step's LTV = (1 - 1/lev)·100; its APY uses the same leverage.ts the app runs live.
 function buildLadder(market: Market): { ladder: LadderPoint[]; maxLeverage: string; defaultPoint: LadderPoint } {
-  const collateralApy = market.collateralToken.apy;
+  // Effective collateral yield = base APY + collateral-side incentive (matches compose's sizing).
+  const collateralApy = BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy).toFixed(2);
   const netBorrow = BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2);
   const maxLtv = Number(market.maxLtv);
   const maxLeverage = calcLeverage(market.maxLtv); // = calcLeverage(maxLtv)
@@ -160,6 +161,17 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
         }
       : undefined;
 
+  // collateral incentive block (MORPHOCOLLATERAL) — extra yield on the collateral; already folded
+  // into the leverageLadder APYs. Same shape as borrowIncentive; omitted when there is none.
+  const collateralIncentive =
+    Number(market.collateralIncentiveApy) > 0
+      ? {
+          aprPct: market.collateralIncentiveApy,
+          breakdown: market.collateralIncentiveBreakdown.map((b) => ({ symbol: b.symbol, aprPct: b.apy })),
+          ...(market.collateralIncentiveUrl ? { campaignUrl: market.collateralIncentiveUrl } : {}),
+        }
+      : undefined;
+
   // freshness attribution
   const borrowFresh = freshnessFromView(snapshot.views[KEYS.morphoMarkets(chainId)]);
   const apyKey = apySourceKey(chainId, apySource, market.collateralToken.address);
@@ -204,6 +216,7 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
 
     collateralApyPct: market.collateralToken.apy,
     collateralApySource: apySource,
+    ...(collateralIncentive ? { collateralIncentive } : {}),
     yieldSustainabilityPct,
 
     borrowApyPct: market.borrowApy,

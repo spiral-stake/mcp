@@ -62,7 +62,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
   const allRoyco = vRoyco?.value ?? {};
   const stUSDSApy = vStUSDS?.value;
   const spUSDGApy = vSpUSDG?.value;
-  const merkl = vMerkl?.value ?? { spot: {}, histories: {} };
+  const merkl = vMerkl?.value ?? { spot: {}, collateralSpot: {}, histories: {} };
   const borrowHistories = vBorrowHist?.value ?? {};
 
   // Loan-token USD defaults to 1 when unpriced (matches the app's `|| BigNumber(1)`); PT-underlying
@@ -134,6 +134,12 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     const borrowIncentiveUrl = spot?.url || undefined;
     const borrowIncentiveHistory = merkl.histories[marketKey] ?? [];
 
+    // ── collateral incentives (Merkl MORPHOCOLLATERAL spot) — extra yield on the supplied collateral ──
+    const collSpot = merkl.collateralSpot?.[marketKey]; // optional: warm data may predate this field
+    const collateralIncentiveApy = collSpot?.apy ?? "0.00";
+    const collateralIncentiveBreakdown = collSpot?.breakdown ?? [];
+    const collateralIncentiveUrl = collSpot?.url || undefined;
+
     const liquidityAssetsUsd =
       morphoMarketData.liquidityAssetsUsd ||
       morphoMarketData.liquidityAssets.multipliedBy(loanTokenValueInUsd).toNumber();
@@ -146,6 +152,9 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       borrowIncentiveBreakdown,
       borrowIncentiveUrl,
       borrowIncentiveHistory,
+      collateralIncentiveApy,
+      collateralIncentiveBreakdown,
+      collateralIncentiveUrl,
       liquidityAssetsUsd,
       supplyAssetsUsd,
     });
@@ -171,9 +180,12 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       market.collateralToken.info = { ...market.collateralToken.info, ...warmExit };
     }
 
+    // Effective collateral yield = base token APY + collateral-side Merkl incentive (mirror of how
+    // the borrow incentive is netted off borrowApy). Used everywhere the live leverage APY is sized.
+    const effectiveCollateralApy = BigNumber(tokenApy).plus(collateralIncentiveApy).toFixed(2);
     market.defaultLeverageApy = calcLeverageApy(
       market.correlated,
-      tokenApy,
+      effectiveCollateralApy,
       BigNumber(morphoMarketData.borrowApy).minus(borrowIncentiveApy).toFixed(2),
       market.safeLtv,
     );
@@ -185,7 +197,9 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     // eligible), but /v1/app/markets keeps ineligible markets so the app can still resolve a
     // portfolio position on one (e.g. a PT that has since crossed into its maturity window).
     market.visible =
-      Number(market.collateralToken.apy) > 0 &&
+      (Number(market.collateralToken.apy) > 0 ||
+        Number(borrowIncentiveApy) > 0 ||
+        Number(collateralIncentiveApy) > 0) &&
       !market.collateralToken.info?.noSwapRoute &&
       (!market.collateralToken.isPt ||
         (market.collateralToken.maturityDaysLeft ?? 0) > env.PT_MINIMUM_MATURITY_DAYS) &&

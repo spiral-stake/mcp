@@ -54,6 +54,11 @@ export interface Market {
   borrowIncentiveBreakdown: { symbol: string; apy: string }[];
   borrowIncentiveUrl?: string;
   borrowIncentiveHistory: MerklAprRecord[];
+  // Collateral-side Merkl incentive (MORPHOCOLLATERAL) — extra yield on the supplied collateral,
+  // market-specific. Spot only (no history), so it lifts the live leverage APY but not the 30/60/90d.
+  collateralIncentiveApy: string;
+  collateralIncentiveBreakdown: { symbol: string; apy: string }[];
+  collateralIncentiveUrl?: string;
   collateralTokenValueInLoanToken: BigNumber;
   loanTokenValueInCollateralToken: BigNumber;
   supplyAssets: BigNumber;

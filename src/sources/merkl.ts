@@ -22,8 +22,9 @@ export interface MerklSpotIncentive {
 export type MerklSpotIncentives = Record<string, MerklSpotIncentive>; // morphoMarketId → spot
 
 export interface MerklIncentiveData {
-  spot: MerklSpotIncentives;
-  histories: MerklIncentiveHistories;
+  spot: MerklSpotIncentives; // borrow-side (MORPHOBORROW): offsets borrow cost
+  collateralSpot: MerklSpotIncentives; // collateral-side (MORPHOCOLLATERAL): adds to collateral yield
+  histories: MerklIncentiveHistories; // borrow-side APR history only
 }
 
 interface MerklCampaignMeta {
@@ -52,14 +53,14 @@ const MAX_PAGES = 10;
 
 const discoverCampaignsByMarket = async (
   chainId: number,
-  opts: { liveOnly?: boolean } = {},
+  opts: { liveOnly?: boolean; type?: "MORPHOBORROW" | "MORPHOCOLLATERAL" } = {},
 ): Promise<Record<string, MerklCampaignMeta[]>> => {
   const liveOnly = opts.liveOnly ?? false;
   const byMarket: Record<string, MerklCampaignMeta[]> = {};
 
   for (let page = 0; page < MAX_PAGES; page++) {
     const params = new URLSearchParams({
-      type: "MORPHOBORROW",
+      type: opts.type ?? "MORPHOBORROW",
       chainId: String(chainId),
       items: String(PAGE_SIZE),
       page: String(page),
@@ -119,19 +120,27 @@ export const fetchMerklIncentiveData = async (
   marketIds: string[],
 ): Promise<MerklIncentiveData | null> => {
   const wanted = new Set(marketIds.map((id) => id.toLowerCase()));
-  const byMarket = await discoverCampaignsByMarket(chainId);
-  if (Object.keys(byMarket).length === 0) return null;
+  // Borrow-side (MORPHOBORROW) and collateral-side (MORPHOCOLLATERAL) campaigns are separate axes:
+  // one offsets borrow cost, the other adds to collateral yield. Both are ~1 list call per chain.
+  const [byMarket, collByMarket] = await Promise.all([
+    discoverCampaignsByMarket(chainId),
+    discoverCampaignsByMarket(chainId, { type: "MORPHOCOLLATERAL" }),
+  ]);
+  // Unhealthy only if Merkl returned nothing on either axis (a chain may legitimately have just one).
+  if (Object.keys(byMarket).length === 0 && Object.keys(collByMarket).length === 0) return null;
 
-  const wantedByMarket = Object.fromEntries(
-    Object.entries(byMarket).filter(([market]) => wanted.has(market)),
-  );
+  const filterWanted = (all: Record<string, MerklCampaignMeta[]>) =>
+    Object.fromEntries(Object.entries(all).filter(([market]) => wanted.has(market)));
+  const wantedByMarket = filterWanted(byMarket);
 
-  const spot = computeSpotIncentives(wantedByMarket, Date.now());
+  const now = Date.now();
+  const spot = computeSpotIncentives(wantedByMarket, now);
+  const collateralSpot = computeSpotIncentives(filterWanted(collByMarket), now);
 
   const campaignIds = [
     ...new Set(Object.values(wantedByMarket).flatMap((metas) => metas.map((m) => m.id))),
   ];
-  if (campaignIds.length === 0) return { spot, histories: {} };
+  if (campaignIds.length === 0) return { spot, collateralSpot, histories: {} };
 
   const recordsById: Record<string, MerklAprRecord[]> = {};
   await Promise.all(
@@ -150,7 +159,7 @@ export const fetchMerklIncentiveData = async (
       histories[market] = mergeAprRecords(metas.map((m) => recordsById[m.id] ?? []));
     }
   }
-  return { spot, histories };
+  return { spot, collateralSpot, histories };
 };
 
 const mergeAprRecords = (histories: MerklAprRecord[][]): MerklAprRecord[] =>

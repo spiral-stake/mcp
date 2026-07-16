@@ -79,8 +79,9 @@ export interface Strategy {
   loan: StrategyLoan;
 
   // yield facts (raw)
-  collateralApyPct: PctString;
+  collateralApyPct: PctString; // base collateral yield (excludes the incentive below)
   collateralApySource: string; // pendle|defillama|royco|stablewatch|onchain
+  collateralIncentive?: BorrowIncentive; // MORPHOCOLLATERAL reward; already folded into leverageLadder
   yieldSustainabilityPct?: { avg30d?: PctString; avg60d?: PctString; avg90d?: PctString };
 
   // borrow facts (raw)
