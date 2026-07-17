@@ -4,8 +4,17 @@
 // the 12h exit-liquidity cadence; compose overlays the results onto collateralTokens.json (the baked
 // values stay the cold-start seed / per-token fallback).
 //
-// Semantics preserved from the script:
-//  - fair unit price = a tiny probe's USDC output (ground truth), CoinGecko fallback, larger probe last.
+// Semantics:
+//  - Every reading is derived from RAW amountOut (USDC received, ~$1/unit). The aggregator's
+//    amountInUsd/amountOutUsd are its own price-feed estimates and are unreliable for some tokens
+//    (they can imply -80% or +100% impact), so they are never used.
+//  - The fair rate comes from an ANCHOR_USD-sized probe, not a dust probe. A ~$1 trade sits in
+//    unarbitraged pool mispricing, so its rate is unrepresentative — measured live it runs +0.3%..+1.2%
+//    rich. Using it as the reference stamped that offset onto EVERY size as constant phantom slippage
+//    (flat readings), which silently mis-tiered the deepest markets as "limited" once the offset
+//    drifted past DEPTH_MAX_SLIPPAGE. An anchor at $10k is large enough to be arbitraged.
+//  - fairPrice() is only a rough unit price used to SIZE the anchor probe; a small sizing error is
+//    immaterial to a depth tier.
 //  - transient failure (429/5xx/network/timeout after retries) is OMITTED so the warmer keeps the
 //    token's prior value; a definitive no-route writes all-null.
 //  - PTs are measured via their underlying (the contract exits PT -> underlying -> stable).
@@ -24,6 +33,10 @@ const SIZES = {
   exitSlippage5M: 5_000_000,
 } as const;
 const PROBE_TOKENS = 1;
+const STABLE_DECIMALS = 6; // USDC
+// Notional for the fair-rate anchor. Big enough that pool mispricing is arbitraged away (a dust
+// probe's rate is not), small enough to carry no real depth cost on any listed collateral.
+const ANCHOR_USD = 10_000;
 const CONCURRENCY = 4;
 const TIMEOUT_MS = 10_000;
 const MAX_RETRIES = 4;
@@ -70,7 +83,9 @@ async function fetchRetry(url: string, headers: Record<string, string>): Promise
   return { transient: true };
 }
 
-type Quote = { outUsd?: number; noRoute?: true; transient?: true };
+// `out` is the USDC actually received (raw amountOut, scaled) — an executable amount, not a
+// price-feed estimate. USDC ~= $1, so it doubles as the USD value of the exit.
+type Quote = { out?: number; noRoute?: true; transient?: true };
 
 async function quoteExit(tokenIn: string, dec: number, tokenAmount: number): Promise<Quote> {
   const amountIn = toBaseUnits(tokenAmount, dec).toString();
@@ -79,8 +94,9 @@ async function quoteExit(tokenIn: string, dec: number, tokenAmount: number): Pro
   if (r.transient) return { transient: true };
   if (r.status === 400 || r.status === 404 || r.status === 422) return { noRoute: true };
   if (r.status !== 200) return { transient: true };
-  const outUsd = Number(r.json?.data?.routeSummary?.amountOutUsd);
-  return Number.isFinite(outUsd) && outUsd > 0 ? { outUsd } : { noRoute: true };
+  const raw = r.json?.data?.routeSummary?.amountOut;
+  const out = raw == null ? NaN : Number(raw) / 10 ** STABLE_DECIMALS;
+  return Number.isFinite(out) && out > 0 ? { out } : { noRoute: true };
 }
 
 async function coingeckoPrice(id?: string): Promise<number | null> {
@@ -103,6 +119,7 @@ async function coingeckoPrice(id?: string): Promise<number | null> {
   return null;
 }
 
+// Rough unit price — used ONLY to size the anchor probe, never as a slippage reference (see header).
 async function fairPrice(
   address: string,
   dec: number,
@@ -110,13 +127,13 @@ async function fairPrice(
 ): Promise<{ price?: number; transient?: true; noRoute?: true }> {
   const p1 = await quoteExit(address, dec, PROBE_TOKENS);
   if (p1.transient) return { transient: true };
-  if (p1.outUsd) return { price: p1.outUsd / PROBE_TOKENS };
+  if (p1.out) return { price: p1.out / PROBE_TOKENS };
   const cg = await coingeckoPrice(coingeckoId);
   if (cg) return { price: cg };
   for (const n of [100, 1000]) {
     const q = await quoteExit(address, dec, n);
     if (q.transient) return { transient: true };
-    if (q.outUsd) return { price: q.outUsd / n };
+    if (q.out) return { price: q.out / n };
   }
   return { noRoute: true };
 }
@@ -126,16 +143,26 @@ async function measureToken(
   dec: number,
   coingeckoId?: string,
 ): Promise<{ status: "ok" | "noroute" | "transient"; slippages?: ExitSlippage }> {
+  const allNull = () =>
+    Object.fromEntries(Object.keys(SIZES).map((k) => [k, null])) as ExitSlippage;
+
   const fp = await fairPrice(address, dec, coingeckoId);
   if (fp.transient) return { status: "transient" };
-  if (fp.noRoute) {
-    return { status: "noroute", slippages: Object.fromEntries(Object.keys(SIZES).map((k) => [k, null])) as ExitSlippage };
-  }
+  if (fp.noRoute) return { status: "noroute", slippages: allNull() };
+
+  // Fair executable rate, from an arbitraged $10k probe (NOT the dust price above).
+  const anchorTokens = ANCHOR_USD / fp.price!;
+  const aq = await quoteExit(address, dec, anchorTokens);
+  if (aq.transient) return { status: "transient" };
+  if (aq.noRoute) return { status: "noroute", slippages: allNull() };
+  const anchorRate = aq.out! / anchorTokens; // USDC per token
+
   const slippages: ExitSlippage = {};
   for (const [field, targetUsd] of Object.entries(SIZES)) {
-    const q = await quoteExit(address, dec, targetUsd / fp.price!);
+    // Size the probe off the anchor rate, so `targetUsd` is the true fair value of what we send in.
+    const q = await quoteExit(address, dec, targetUsd / anchorRate);
     if (q.transient) return { status: "transient" };
-    slippages[field as keyof ExitSlippage] = q.noRoute ? null : round2(((targetUsd - q.outUsd!) / targetUsd) * 100);
+    slippages[field as keyof ExitSlippage] = q.noRoute ? null : round2(((targetUsd - q.out!) / targetUsd) * 100);
   }
   return { status: "ok", slippages };
 }
