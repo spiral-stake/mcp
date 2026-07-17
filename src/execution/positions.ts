@@ -7,6 +7,12 @@ import { type Abi } from "viem";
 import flashLeverageJson from "../abi/FlashLeverage.sol/FlashLeverage.json" with { type: "json" };
 import { formatUnits } from "../core/formatUnits.ts";
 import { calcLeverageApy } from "../core/leverage.ts";
+import {
+  exitLiquidityTier,
+  exitLiquiditySize,
+  exitLiquidityCleanSizeUsd,
+  type ExitLiquidityTier,
+} from "../core/exitLiquidity.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { readAddresses } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
@@ -40,6 +46,19 @@ export interface LeveragePositionView {
   currentLeverage: string;
   netValueUsd: string; // equity value in USD
   currentLeverageApyPct: string; // leveraged APY at the position's current LTV
+  // Can this position actually be unwound? A one-shot close swaps the FULL leveraged collateral,
+  // so the notional that matters is the whole position, not the user's equity. Surfaced per
+  // position so a holder (or a monitoring agent) sees the exit degrading before close stops
+  // working — `close` fails closed when the route is gone, but by then it's too late to plan.
+  // Escape hatch when exit liquidity dries up: `repay` (in the loan token) + `remove_collateral`
+  // both need NO swap route, so the collateral can always be withdrawn in-kind.
+  exitLiquidity: {
+    tier: ExitLiquidityTier; // deep | good | limited | thin | unknown
+    cleanExitSize: string; // largest notional that exits cleanly, e.g. "$1M+" ("" = none)
+    unwindSizeUsd: number; // this position's full unwind notional
+    exceedsCleanExitSize: boolean; // unwind size > what exits cleanly ⇒ expect slippage on close
+    noSwapRoute: boolean; // hard flag: collateral is currently unswappable
+  };
 }
 
 // Current state of a single position, for the manage/close builders. Reads the on-chain position
@@ -145,6 +164,14 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
     const liquidated = pos.open && amountLeveragedCollateral.isZero();
     const netBorrowApy = BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2);
 
+    // Exit health for THIS position: a one-shot close swaps the full leveraged collateral, so the
+    // notional to compare against the market's clean-exit depth is the whole position, not equity.
+    const info = market.collateralToken.info;
+    const unwindSizeUsd = amountLeveragedCollateral
+      .multipliedBy(market.collateralToken.valueInUsd)
+      .toNumber();
+    const cleanSizeUsd = exitLiquidityCleanSizeUsd(info);
+
     return {
       id,
       positionId: `${chainId}-${market.morphoMarketId}-${id}`,
@@ -163,6 +190,13 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
       currentLeverage: currentLeverage.toFixed(2),
       netValueUsd: equityInLoan.multipliedBy(market.loanToken.valueInUsd).toFixed(2),
       currentLeverageApyPct: calcLeverageApy(market.correlated, market.collateralToken.apy, netBorrowApy, ltv.toFixed(2)),
+      exitLiquidity: {
+        tier: exitLiquidityTier(info),
+        cleanExitSize: exitLiquiditySize(info),
+        unwindSizeUsd: Number(unwindSizeUsd.toFixed(2)),
+        exceedsCleanExitSize: unwindSizeUsd > cleanSizeUsd,
+        noSwapRoute: !!info?.noSwapRoute,
+      },
     };
   });
 

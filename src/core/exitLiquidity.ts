@@ -59,6 +59,18 @@ export function exitLiquiditySize(info?: ExitSlippageFields): string {
   return "";
 }
 
+// Numeric counterpart to exitLiquiditySize(): the largest swap notional (USD) that stays under the
+// clean-execution bar, or 0 when nothing (down to $100k) is clean. Lets a caller compare a live
+// position's unwind size against the depth that actually exits cleanly.
+export function exitLiquidityCleanSizeUsd(info?: ExitSlippageFields): number {
+  if (!info) return 0;
+  if (clean(info.exitSlippage5M)) return 5_000_000;
+  if (clean(info.exitSlippage1M)) return 1_000_000;
+  if (clean(info.exitSlippage500k)) return 500_000;
+  if (clean(info.exitSlippage100k)) return 100_000;
+  return 0;
+}
+
 // True when a token can't be safely exited at $100k, i.e. a candidate for noSwapRoute.
 // Un-flagging stays a manual decision; a healthy reading is only a suggestion.
 export function isExitThin(info?: ExitSlippageFields): boolean {
