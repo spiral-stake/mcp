@@ -4,8 +4,14 @@
 // the 12h exit-liquidity cadence; compose overlays the results onto collateralTokens.json (the baked
 // values stay the cold-start seed / per-token fallback).
 //
-// Semantics preserved from the script:
-//  - fair unit price = a tiny probe's USDC output (ground truth), CoinGecko fallback, larger probe last.
+// Semantics:
+//  - slippage = price impact measured WITHIN one quote (amountInUsd vs amountOutUsd), so no
+//    cross-quote reference bias. Negative = price improvement (valid).
+//  - fair unit price is used ONLY to size each probe (how many tokens ~= $100k/$500k/$1M/$5M). It is
+//    deliberately NOT the slippage denominator: a tiny probe's rate is unrepresentative (dust-level
+//    pool mispricing goes unarbitraged), and using it as the reference stamped a constant phantom
+//    slippage onto every size — flat readings that mis-tiered deep tokens as "limited". A sizing
+//    error only shifts the notional slightly, which a depth tier is insensitive to.
 //  - transient failure (429/5xx/network/timeout after retries) is OMITTED so the warmer keeps the
 //    token's prior value; a definitive no-route writes all-null.
 //  - PTs are measured via their underlying (the contract exits PT -> underlying -> stable).
@@ -70,7 +76,7 @@ async function fetchRetry(url: string, headers: Record<string, string>): Promise
   return { transient: true };
 }
 
-type Quote = { outUsd?: number; noRoute?: true; transient?: true };
+type Quote = { inUsd?: number; outUsd?: number; noRoute?: true; transient?: true };
 
 async function quoteExit(tokenIn: string, dec: number, tokenAmount: number): Promise<Quote> {
   const amountIn = toBaseUnits(tokenAmount, dec).toString();
@@ -79,8 +85,11 @@ async function quoteExit(tokenIn: string, dec: number, tokenAmount: number): Pro
   if (r.transient) return { transient: true };
   if (r.status === 400 || r.status === 404 || r.status === 422) return { noRoute: true };
   if (r.status !== 200) return { transient: true };
-  const outUsd = Number(r.json?.data?.routeSummary?.amountOutUsd);
-  return Number.isFinite(outUsd) && outUsd > 0 ? { outUsd } : { noRoute: true };
+  const summary = r.json?.data?.routeSummary;
+  const outUsd = Number(summary?.amountOutUsd);
+  const inUsd = Number(summary?.amountInUsd);
+  if (!Number.isFinite(outUsd) || outUsd <= 0) return { noRoute: true };
+  return { outUsd, inUsd: Number.isFinite(inUsd) && inUsd > 0 ? inUsd : undefined };
 }
 
 async function coingeckoPrice(id?: string): Promise<number | null> {
@@ -103,6 +112,7 @@ async function coingeckoPrice(id?: string): Promise<number | null> {
   return null;
 }
 
+// Rough unit price, used ONLY to size the probes (see header) — never as a slippage reference.
 async function fairPrice(
   address: string,
   dec: number,
@@ -135,7 +145,17 @@ async function measureToken(
   for (const [field, targetUsd] of Object.entries(SIZES)) {
     const q = await quoteExit(address, dec, targetUsd / fp.price!);
     if (q.transient) return { status: "transient" };
-    slippages[field as keyof ExitSlippage] = q.noRoute ? null : round2(((targetUsd - q.outUsd!) / targetUsd) * 100);
+    if (q.noRoute) {
+      slippages[field as keyof ExitSlippage] = null;
+      continue;
+    }
+    // Price impact is measured WITHIN a single quote: the aggregator's own valuation of the input
+    // vs the output it returns. Both legs come from the same response, so the reading carries no
+    // cross-quote reference bias. (Measuring against a target USD derived from `fp.price` instead
+    // would inherit that probe's mispricing as a constant phantom slippage at every size — the
+    // reason deep tokens once read a flat ~1.7% and were mis-tiered "limited".)
+    if (q.inUsd == null) return { status: "transient" }; // no input valuation -> can't measure; keep prior
+    slippages[field as keyof ExitSlippage] = round2(((q.inUsd - q.outUsd!) / q.inUsd) * 100);
   }
   return { status: "ok", slippages };
 }
