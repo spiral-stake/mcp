@@ -93,7 +93,8 @@ export interface Market {
 export interface MarketCurator {
   name: string;
   image: string;
-  // The curator's V2 vaults that supply this market (name + vault TVL in USD), largest first.
+  // The curator's largest V2 vault supplying this market (name + vault TVL in USD). One-element
+  // array kept for shape flexibility, but only the top vault per curator is surfaced.
   vaults: { name: string; totalAssetsUsd: number }[];
 }
 

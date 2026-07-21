@@ -66,7 +66,8 @@ const parseCurators = (supplyingVaultV2s: any[]): MarketCurator[] => {
     .slice(0, 2)
     .map(({ maxUsd: _maxUsd, ...c }) => ({
       ...c,
-      vaults: c.vaults.sort((a, b) => b.totalAssetsUsd - a.totalAssetsUsd),
+      // Show only the curator's largest supplying vault — one line per curator in the hover card.
+      vaults: c.vaults.sort((a, b) => b.totalAssetsUsd - a.totalAssetsUsd).slice(0, 1),
     }));
 };
 
