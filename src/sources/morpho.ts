@@ -2,7 +2,7 @@
 // history. Ported from api-services/morpho.ts (parse logic identical for parity). Caching is the
 // warmer's job here; these are pure fetch+parse functions.
 import BigNumber from "bignumber.js";
-import { Market, SharedLiquidityRaw } from "../types/index.ts";
+import { Market, MarketCurator, SharedLiquidityRaw } from "../types/index.ts";
 import { formatUnits } from "../core/formatUnits.ts";
 import { postJson } from "./http.ts";
 
@@ -31,7 +31,44 @@ const MORPHO_FIELDS = `
       marketId
     }
   }
+  supplyingVaultV2s {
+    name
+    totalAssetsUsd
+    curators {
+      items {
+        name
+        image
+      }
+    }
+  }
 `;
+
+// Dedupe the curators across a market's supplying V2 vaults, keep the top 2 by their largest
+// supplying vault's TVL (mega-vaults like Steakhouse/Gauntlet supply nearly every market, so
+// ranking keeps the most material curators first), and list each curator's vaults largest-first.
+const parseCurators = (supplyingVaultV2s: any[]): MarketCurator[] => {
+  const byName = new Map<string, MarketCurator & { maxUsd: number }>();
+  for (const vault of supplyingVaultV2s ?? []) {
+    const totalAssetsUsd = Number(vault.totalAssetsUsd) || 0;
+    for (const c of vault.curators?.items ?? []) {
+      if (!c?.name) continue;
+      const entry: MarketCurator & { maxUsd: number } =
+        byName.get(c.name) ?? { name: c.name, image: c.image ?? "", vaults: [], maxUsd: 0 };
+      if (!entry.image && c.image) entry.image = c.image;
+      entry.vaults.push({ name: vault.name, totalAssetsUsd });
+      entry.maxUsd = Math.max(entry.maxUsd, totalAssetsUsd);
+      byName.set(c.name, entry);
+    }
+  }
+
+  return [...byName.values()]
+    .sort((a, b) => b.maxUsd - a.maxUsd)
+    .slice(0, 2)
+    .map(({ maxUsd: _maxUsd, ...c }) => ({
+      ...c,
+      vaults: c.vaults.sort((a, b) => b.totalAssetsUsd - a.totalAssetsUsd),
+    }));
+};
 
 export interface MorphoMarketData {
   borrowApy: string;
@@ -43,6 +80,7 @@ export interface MorphoMarketData {
   liquidityAssetsUsd: number;
   paLiquidityAssets: BigNumber;
   paSharedLiquidity: SharedLiquidityRaw[];
+  curators?: MarketCurator[];
 }
 
 const parseMorphoMarketData = (raw: any, market: Market): MorphoMarketData => {
@@ -71,6 +109,7 @@ const parseMorphoMarketData = (raw: any, market: Market): MorphoMarketData => {
     liquidityAssetsUsd,
     paLiquidityAssets: formatUnits(paLiquidityAssets, market.loanToken.decimals),
     paSharedLiquidity: raw.publicAllocatorSharedLiquidity as SharedLiquidityRaw[],
+    curators: parseCurators(raw.supplyingVaultV2s),
   };
 };
 

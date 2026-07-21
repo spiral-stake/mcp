@@ -84,6 +84,17 @@ export interface Market {
   irm: string;
   marketParams: MarketParams;
   oracleType?: OracleType;
+  // Morpho V2 vault curators supplying this market, deduped and capped to the top 2 by their
+  // largest supplying vault's TVL. Sourced in sources/morpho.ts, display-only. undefined = the
+  // market has no curated V2 vault supply (renders nothing in the app).
+  curators?: MarketCurator[];
+}
+
+export interface MarketCurator {
+  name: string;
+  image: string;
+  // The curator's V2 vaults that supply this market (name + vault TVL in USD), largest first.
+  vaults: { name: string; totalAssetsUsd: number }[];
 }
 
 export type OracleType = "nav" | "market";
