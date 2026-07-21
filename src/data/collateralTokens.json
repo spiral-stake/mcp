@@ -11,10 +11,10 @@
     "twitter": "https://x.com/sparkdotfi",
     "project": "Spark",
     "noSwapRoute": true,
-    "exitSlippage100k": null,
-    "exitSlippage500k": null,
-    "exitSlippage1M": null,
-    "exitSlippage5M": null
+    "exitSlippage100k": 87.44,
+    "exitSlippage500k": 96.35,
+    "exitSlippage1M": 98.06,
+    "exitSlippage5M": 99.59
   },
   "0x40858070814a57FdF33a613ae84fE0a8b4a874f7": {
     "name": "syrupUSDG",
@@ -27,7 +27,11 @@
     "description": "syrupUSDG is Maple Finance's yield-bearing USDG token, powered by the Syrup platform. Yield is generated from fixed-rate, overcollateralized loans to institutional borrowers, providing consistent short-duration yield to DeFi lenders.",
     "website": "https://maple.finance/",
     "twitter": "https://x.com/maplefinance",
-    "project": "Maple"
+    "project": "Maple",
+    "exitSlippage100k": 0.31,
+    "exitSlippage500k": 0.15,
+    "exitSlippage1M": 0.61,
+    "exitSlippage5M": 63.36
   },
   "0x7f39C581F595B53c5cb19bD0b3f8dA6c935E2Ca0": {
     "name": "Wrapped liquid staked Ether 2.0",
@@ -493,7 +497,11 @@
     "description": "USDe is Ethena's synthetic dollar, backed by crypto collateral hedged with short perpetual futures to hold a delta-neutral peg to the US dollar. USDe itself is not yield-bearing — holders earn Ethena's funding-rate yield only by staking it into sUSDe.",
     "website": "https://ethena.fi/",
     "twitter": "https://x.com/ethena",
-    "project": "Ethena"
+    "project": "Ethena",
+    "exitSlippage100k": 0,
+    "exitSlippage500k": 0.13,
+    "exitSlippage1M": 32.65,
+    "exitSlippage5M": 86.78
   },
   "0xC58D044404d8B14e953C115E67823784dEA53d8F": {
     "name": "Strata Junior USDe",
