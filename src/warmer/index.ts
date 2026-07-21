@@ -182,7 +182,7 @@ export class Warmer {
         required: false,
         run: async () => {
           const prior = this.store.view<ExitLiquidityMap>(KEYS.exitLiquidity(chainId))?.value ?? {};
-          const fresh = await fetchExitLiquidity(markets);
+          const fresh = await fetchExitLiquidity(markets, chainId);
           return { ...prior, ...fresh };
         },
       },
