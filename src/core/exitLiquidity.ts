@@ -70,11 +70,13 @@ export function exitLiquidityCleanSizeUsd(info?: ExitSlippageFields): number {
   return 0;
 }
 
-// True when no route exists at $100k (null measurement), i.e. the market should be hidden from
-// listings. Distinct from "thin" tier: a thin market has a route at $100k but can't exit cleanly
+// True when the market has no usable route at $100k and should be hidden from listings.
+// Covers two cases: null (no route measured) and > LISTING_MAX_SLIPPAGE (route exists but too bad).
+// Distinct from "thin": a thin market has a clean route at $100k (< 2%) but can't exit cleanly
 // above that size — it's still listed and shown.
 export function isExitNoRoute(info?: ExitSlippageFields): boolean {
-  return info?.exitSlippage100k === null;
+  const s100 = info?.exitSlippage100k;
+  return s100 === null || (typeof s100 === "number" && s100 > LISTING_MAX_SLIPPAGE);
 }
 
 // True when a token can't be safely exited at $100k, i.e. a candidate for noSwapRoute.
