@@ -101,7 +101,7 @@ export const EXIT_LIQUIDITY_META: Record<ExitLiquidityTier, { label: string; hin
   },
   thin: {
     label: "Thin",
-    hint: "Thin exit liquidity — even ~$100k may incur high slippage.",
+    hint: "Thin exit liquidity — ~$100k swaps cleanly, but larger sizes may slip more.",
   },
   unknown: { label: "", hint: "Exit liquidity not measured yet." },
 };
