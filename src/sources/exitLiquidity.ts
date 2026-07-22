@@ -39,6 +39,7 @@ const SIZES = {
   exitSlippage500k: 500_000,
   exitSlippage1M: 1_000_000,
   exitSlippage5M: 5_000_000,
+  exitSlippage10M: 10_000_000,
 } as const;
 // Near-spot reference notional for the fair rate. Small enough to carry no real slippage (truest
 // rate, cleanest on thin pools), large enough to route reliably and dodge dust rounding/no-route.
@@ -55,6 +56,7 @@ export type ExitSlippage = {
   exitSlippage500k?: number | null;
   exitSlippage1M?: number | null;
   exitSlippage5M?: number | null;
+  exitSlippage10M?: number | null;
 };
 export type ExitLiquidityMap = Record<string, ExitSlippage>; // keyed by entry (collateral) address
 

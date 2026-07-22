@@ -72,11 +72,12 @@ function buildLadder(market: Market): { ladder: LadderPoint[]; maxLeverage: stri
 }
 
 // ── exit liquidity (raw facts) + spiralHints (the only verdict) ────────────────
-const EXIT_SIZES: [keyof Pick<CollateralTokenInfo, "exitSlippage100k" | "exitSlippage500k" | "exitSlippage1M" | "exitSlippage5M">, string][] = [
+const EXIT_SIZES: [keyof Pick<CollateralTokenInfo, "exitSlippage100k" | "exitSlippage500k" | "exitSlippage1M" | "exitSlippage5M" | "exitSlippage10M">, string][] = [
   ["exitSlippage100k", "100000"],
   ["exitSlippage500k", "500000"],
   ["exitSlippage1M", "1000000"],
   ["exitSlippage5M", "5000000"],
+  ["exitSlippage10M", "10000000"],
 ];
 
 function buildExitLiquidity(info: CollateralTokenInfo | undefined): ExitLiquidity {

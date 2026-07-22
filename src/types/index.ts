@@ -170,6 +170,7 @@ export interface CollateralTokenInfo {
   exitSlippage500k?: number | null;
   exitSlippage1M?: number | null;
   exitSlippage5M?: number | null;
+  exitSlippage10M?: number | null;
 
   defaultLeverageApyDay?: number;
 
