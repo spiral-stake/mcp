@@ -1,15 +1,24 @@
-// Exit-liquidity slippage — measured LIVE, replacing the app's manual `npm run refresh:liquidity`.
-// Ported from v2-client/scripts/refresh-exit-slippage.mjs. Kyberswap -> the chain's exit stable,
-// keyless via x-client-id (per-chain slug + stable in CHAIN below); CoinGecko demo key for the
-// fair-price fallback. Chains without a CHAIN entry are not measured. The warmer runs this on
-// the 12h exit-liquidity cadence; compose overlays the results onto collateralTokens.json (the baked
-// values stay the cold-start seed / per-token fallback).
+// Exit-liquidity slippage — measured LIVE via Kyberswap (collateral -> the chain's exit stable).
+// The warmer runs this on the 12h cadence; compose overlays the result onto collateralTokens.json
+// (baked values are the cold-start seed / fallback).
 //
-// Semantics preserved from the script:
-//  - fair unit price = a tiny probe's USDC output (ground truth), CoinGecko fallback, larger probe last.
-//  - transient failure (429/5xx/network/timeout after retries) is OMITTED so the warmer keeps the
-//    token's prior value; a definitive no-route writes all-null.
+// Method — RATE DECAY (the only thing that matters, kept deliberately small):
+//   1. A small $REF_USD near-spot swap gives the fair executable rate (USDC per token). At $100 there
+//      is no meaningful slippage, so this is the truest rate — smaller reference = cleaner on thin
+//      pools. Every number is RAW amountOut (USDC received); the aggregator's amountInUsd/amountOutUsd
+//      are its own price-feed estimates and are unreliable for many tokens, so they are never used.
+//   2. For each target size, swap ~$size worth and take rate = out / tokensIn.
+//   3. slippage(size) = (fairRate - rate) / fairRate. Negative = price improvement (valid).
+//   A rough unit price is used ONLY to size the probes — a sizing error just shifts the sampled
+//   notional slightly, which a depth tier is insensitive to; it is never the slippage reference.
+//
+// Guards:
+//  - transient failure (429/5xx/network/timeout) is OMITTED so the warmer keeps the token's prior
+//    value; a definitive no-route writes all-null.
+//  - coherence: a route that vanishes at a small size but reappears at a larger one is a routing
+//    glitch, not real liquidity — the whole token is treated as transient (never published).
 //  - PTs are measured via their underlying (the contract exits PT -> underlying -> stable).
+//  - a chain with no CHAIN entry is not measured (never quoted against the wrong chain).
 import { env } from "../config/env.ts";
 import type { Market } from "../types/index.ts";
 
@@ -31,6 +40,10 @@ const SIZES = {
   exitSlippage1M: 1_000_000,
   exitSlippage5M: 5_000_000,
 } as const;
+// Near-spot reference notional for the fair rate. Small enough to carry no real slippage (truest
+// rate, cleanest on thin pools), large enough to route reliably and dodge dust rounding/no-route.
+const REF_USD = 100;
+const STABLE_DECIMALS = 6; // USDC and USDG are both 6-decimal (only affects the rough price's scale)
 const PROBE_TOKENS = 1;
 const CONCURRENCY = 4;
 const TIMEOUT_MS = 10_000;
@@ -78,7 +91,9 @@ async function fetchRetry(url: string, headers: Record<string, string>): Promise
   return { transient: true };
 }
 
-type Quote = { outUsd?: number; noRoute?: true; transient?: true };
+// `out` = USDC actually received (raw amountOut, scaled to whole units). An executable amount, not a
+// price-feed estimate — reliable for every token.
+type Quote = { out?: number; noRoute?: true; transient?: true };
 
 async function quoteExit(chainId: number, tokenIn: string, dec: number, tokenAmount: number): Promise<Quote> {
   const cfg = CHAIN[chainId]!; // presence guaranteed by fetchExitLiquidity's chain guard
@@ -88,8 +103,9 @@ async function quoteExit(chainId: number, tokenIn: string, dec: number, tokenAmo
   if (r.transient) return { transient: true };
   if (r.status === 400 || r.status === 404 || r.status === 422) return { noRoute: true };
   if (r.status !== 200) return { transient: true };
-  const outUsd = Number(r.json?.data?.routeSummary?.amountOutUsd);
-  return Number.isFinite(outUsd) && outUsd > 0 ? { outUsd } : { noRoute: true };
+  const raw = r.json?.data?.routeSummary?.amountOut;
+  const out = raw == null ? NaN : Number(raw) / 10 ** STABLE_DECIMALS;
+  return Number.isFinite(out) && out > 0 ? { out } : { noRoute: true };
 }
 
 async function coingeckoPrice(id?: string): Promise<number | null> {
@@ -112,7 +128,8 @@ async function coingeckoPrice(id?: string): Promise<number | null> {
   return null;
 }
 
-async function fairPrice(
+// Rough unit price (USD/token) — used ONLY to size the probes, never as a slippage reference.
+async function roughPrice(
   chainId: number,
   address: string,
   dec: number,
@@ -120,13 +137,13 @@ async function fairPrice(
 ): Promise<{ price?: number; transient?: true; noRoute?: true }> {
   const p1 = await quoteExit(chainId, address, dec, PROBE_TOKENS);
   if (p1.transient) return { transient: true };
-  if (p1.outUsd) return { price: p1.outUsd / PROBE_TOKENS };
+  if (p1.out) return { price: p1.out / PROBE_TOKENS };
   const cg = await coingeckoPrice(coingeckoId);
   if (cg) return { price: cg };
   for (const n of [100, 1000]) {
     const q = await quoteExit(chainId, address, dec, n);
     if (q.transient) return { transient: true };
-    if (q.outUsd) return { price: q.outUsd / n };
+    if (q.out) return { price: q.out / n };
   }
   return { noRoute: true };
 }
@@ -137,17 +154,39 @@ async function measureToken(
   dec: number,
   coingeckoId?: string,
 ): Promise<{ status: "ok" | "noroute" | "transient"; slippages?: ExitSlippage }> {
-  const fp = await fairPrice(chainId, address, dec, coingeckoId);
-  if (fp.transient) return { status: "transient" };
-  if (fp.noRoute) {
-    return { status: "noroute", slippages: Object.fromEntries(Object.keys(SIZES).map((k) => [k, null])) as ExitSlippage };
-  }
+  const allNull = () => Object.fromEntries(Object.keys(SIZES).map((k) => [k, null])) as ExitSlippage;
+
+  // (1) rough price → size the reference probe.
+  const rp = await roughPrice(chainId, address, dec, coingeckoId);
+  if (rp.transient) return { status: "transient" };
+  if (rp.noRoute) return { status: "noroute", slippages: allNull() };
+
+  // (2) fair near-spot rate from a small $REF_USD swap (raw amounts only).
+  const refTokens = REF_USD / rp.price!;
+  const ref = await quoteExit(chainId, address, dec, refTokens);
+  if (ref.transient) return { status: "transient" };
+  if (ref.noRoute) return { status: "noroute", slippages: allNull() };
+  const fairRate = ref.out! / refTokens; // USDC per token
+
+  // (3) rate decay at each size: slippage = (fairRate - rate) / fairRate.
   const slippages: ExitSlippage = {};
   for (const [field, targetUsd] of Object.entries(SIZES)) {
-    const q = await quoteExit(chainId, address, dec, targetUsd / fp.price!);
+    const tokensIn = targetUsd / fairRate;
+    const q = await quoteExit(chainId, address, dec, tokensIn);
     if (q.transient) return { status: "transient" };
-    slippages[field as keyof ExitSlippage] = q.noRoute ? null : round2(((targetUsd - q.outUsd!) / targetUsd) * 100);
+    if (q.noRoute) {
+      slippages[field as keyof ExitSlippage] = null;
+      continue;
+    }
+    slippages[field as keyof ExitSlippage] = round2(((fairRate - q.out! / tokensIn) / fairRate) * 100);
   }
+
+  // Coherence: a null at a small size followed by a routed value at a larger one is a routing glitch,
+  // not real liquidity (real depth only degrades with size) — don't publish; keep the prior value.
+  const vals = Object.values(slippages);
+  const firstNull = vals.findIndex((v) => v === null);
+  if (firstNull !== -1 && vals.slice(firstNull + 1).some((v) => v !== null)) return { status: "transient" };
+
   return { status: "ok", slippages };
 }
 
