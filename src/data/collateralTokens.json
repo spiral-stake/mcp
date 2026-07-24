@@ -968,6 +968,19 @@
     "exitSlippage1M": 99.67,
     "exitSlippage5M": 99.93
   },
+  "0x0B2b2B2076d95dda7817e785989fE353fe955ef9": {
+    "name": "Staked USDai",
+    "symbol": "sUSDai",
+    "underlyingCollateral": "USDai",
+    "yieldSource": "GPU-Backed Lending",
+    "category": "stable",
+    "coingeckoId": "susdai",
+    "stablewatchId": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
+    "description": "sUSDai is the yield-bearing token of USD.AI, minted by staking USDai, a synthetic dollar fully backed by liquid cash-equivalent reserves. Yield comes from non-recourse loans secured by GPU fleets and the cashflows those assets generate, plus T-Bill returns on idle reserves, and accrues through a rising USDai-per-sUSDai exchange rate. sUSDai is not itself a stablecoin: it carries AI infrastructure credit risk and its protocol redemptions are epoch-based.",
+    "website": "https://usd.ai",
+    "twitter": "https://x.com/USDai_Official",
+    "project": "USD.AI"
+  },
   "0xae78736Cd615f374D3085123A210448E74Fc6393": {
     "name": "Rocket Pool ETH",
     "symbol": "rETH",
