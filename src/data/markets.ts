@@ -29,6 +29,9 @@ interface AddressesFile {
 }
 
 const collateralTokens = readJson<Record<string, CollateralTokenInfo>>("./collateralTokens.json");
+// Addresses already warned about a missing collateralTokens entry, so the warning fires once per
+// process instead of on every readMarkets call (which runs per request + per warm cycle).
+const warnedMissingCollateral = new Set<string>();
 // loanTokens.json is an ARRAY of { address, coingeckoId, ... } (mirrors the app). It must be read
 // as an array and indexed by address — treating it as an object keys everything by array index,
 // which silently breaks price lookups (loanToken USD falls back to $1 for non-stable loan tokens).
@@ -73,12 +76,18 @@ export function readMarkets(chainId: number): Market[] {
       : undefined;
 
     if (!collateralTokens[market.collateralToken.address]) {
-      // Mirrors the app's console warning — an unconfigured collateral is a data gap to surface.
-      console.warn(
-        "[markets] missing collateralTokens entry:",
-        market.collateralToken.symbol,
-        market.collateralToken.address,
-      );
+      // An unconfigured collateral is a data gap worth surfacing — but readMarkets runs on every
+      // compose (per request + per warm cycle), so warn ONCE per address per process instead of
+      // flooding the logs (and burying real errors) on a market that stays intentionally unlisted.
+      const key = market.collateralToken.address.toLowerCase();
+      if (!warnedMissingCollateral.has(key)) {
+        warnedMissingCollateral.add(key);
+        console.warn(
+          "[markets] missing collateralTokens entry:",
+          market.collateralToken.symbol,
+          market.collateralToken.address,
+        );
+      }
     }
 
     if (market.collateralToken.symbol.startsWith("PT-")) {
