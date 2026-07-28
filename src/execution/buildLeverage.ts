@@ -249,7 +249,17 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
     requestedLtv: desiredLtv,
     effectiveLtv,
     amountLeveragedCollateral: totalCollateral.toFixed(4, BigNumber.ROUND_DOWN),
-    expectedLeverageApy: calcLeverageApy(market.correlated, market.collateralToken.apy, BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2), desiredLtv),
+    // Effective collateral yield = base APY + collateral-side Merkl incentive, exactly as
+    // compose.ts sizes defaultLeverageApy and strategy.ts sizes the leverage ladder. Using the
+    // bare base APY here made the preview contradict /v1/strategies (and the app) on any market
+    // whose yield is incentive-dominated — e.g. 0% base + 4.5% incentive previews as a large
+    // NEGATIVE levered APY, because the borrow leg is still netted off.
+    expectedLeverageApy: calcLeverageApy(
+      market.correlated,
+      BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy ?? "0").toFixed(2),
+      BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2),
+      desiredLtv,
+    ),
     priceImpactPct,
   };
 

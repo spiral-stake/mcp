@@ -16,7 +16,7 @@ import BigNumber from "bignumber.js";
 import { type Abi, encodeFunctionData } from "viem";
 import flashLeverageJson from "../abi/FlashLeverage.sol/FlashLeverage.json" with { type: "json" };
 import flashLeverageRouterJson from "../abi/FlashLeverageRouter.sol/FlashLeverageRouter.json" with { type: "json" };
-import { calcIncreaseLeverageFlashLoanAmount } from "../core/leverage.ts";
+import { calcIncreaseLeverageFlashLoanAmount, calcLtv } from "../core/leverage.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
 import { parseUnits } from "../core/formatUnits.ts";
 import { readAddresses } from "../data/markets.ts";
@@ -85,6 +85,44 @@ function targetLtv(input: ManageTxInput, safeLtv: string): string {
   else throw new Error("increase_leverage needs desiredLtv or leverage");
   if (!Number.isFinite(ltv) || ltv <= 0) throw new Error("Invalid target LTV/leverage");
   return Math.min(ltv, Number(safeLtv)).toFixed(2); // never exceed the market's safe LTV
+}
+
+// Fail-closed safe-LTV guard for the two actions that raise LTV without a target-LTV input:
+// remove_collateral (shrinks collateral) and borrow (grows debt). increase_leverage clamps via
+// targetLtv(); these took an absolute amount and so had NO ceiling at all — the contract only
+// reverts above maxLtv (= safeLtv + 0.75), so an agent could land a position a fraction of a
+// percent from liquidation on a path the app's manage cards hard-cap at safeLtv. Throws with the
+// exact safe maximum rather than silently clamping: a tx builder must never sign for a different
+// amount than the caller asked for.
+function assertWithinSafeLtv(
+  pos: ManagePosition,
+  projectedCollateral: BigNumber,
+  projectedLoan: BigNumber,
+  action: string,
+  maxSafeAmount: BigNumber,
+  unitSymbol: string,
+): void {
+  const { market } = pos;
+  const safeMax = BigNumber.max(0, maxSafeAmount);
+  const fail = (ltvLabel: string): never => {
+    throw new Error(
+      `'${action}' would take LTV to ${ltvLabel}, above this market's safe LTV of ` +
+        `${market.safeLtv}% (liquidation ${market.liqLtv}%). Maximum safe amount is ` +
+        `${safeMax.toFixed(6, BigNumber.ROUND_DOWN)} ${unitSymbol}.`,
+    );
+  };
+
+  // Zero collateral against outstanding debt is infinite LTV, but calcLtv reports non-finite
+  // ratios as "0.00" — so this has to be rejected before the numeric comparison, or wiping the
+  // collateral out entirely would read as the SAFEST possible request and sail through.
+  if (projectedCollateral.lte(0)) {
+    if (projectedLoan.lte(0)) return; // nothing borrowed against it — nothing to protect
+    fail("infinite (no collateral left against outstanding debt)");
+  }
+
+  const projectedLtv = calcLtv(projectedCollateral, projectedLoan, market.collateralTokenValueInLoanToken);
+  if (BigNumber(projectedLtv).lte(market.safeLtv)) return;
+  fail(`${projectedLtv}%`);
 }
 
 export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundle> {
@@ -182,6 +220,19 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
     }
     case "remove_collateral": {
       const amount = required(input.amount, "amount", action);
+      // Mirror of the app's WithdrawCollateralCard: loan is unchanged, so the most that can come
+      // out is whatever keeps collateral >= loan / (safeLtv * price).
+      const safeMinCollateral = pos.amountLoan.div(
+        BigNumber(market.safeLtv).div(100).multipliedBy(market.collateralTokenValueInLoanToken),
+      );
+      assertWithinSafeLtv(
+        pos,
+        pos.amountLeveragedCollateral.minus(amount),
+        pos.amountLoan,
+        action,
+        pos.amountLeveragedCollateral.minus(safeMinCollateral),
+        collateral.symbol,
+      );
       to = flashLeverageAddress;
       contractFn = "withdrawCollateral";
       data = encodeFunctionData({ abi: FLASH_LEVERAGE_ABI, functionName: "withdrawCollateral", args: [BigInt(id), parseUnits(amount, collateral.decimals)] });
@@ -189,6 +240,19 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
     }
     case "borrow": {
       const amount = required(input.amount, "amount", action);
+      // Collateral is unchanged, so the ceiling is safeLtv * collateralValue minus existing debt.
+      const safeMaxLoan = BigNumber(market.safeLtv)
+        .div(100)
+        .multipliedBy(pos.amountLeveragedCollateral)
+        .multipliedBy(market.collateralTokenValueInLoanToken);
+      assertWithinSafeLtv(
+        pos,
+        pos.amountLeveragedCollateral,
+        pos.amountLoan.plus(amount),
+        action,
+        safeMaxLoan.minus(pos.amountLoan),
+        loan.symbol,
+      );
       to = flashLeverageAddress;
       contractFn = "borrow";
       data = encodeFunctionData({ abi: FLASH_LEVERAGE_ABI, functionName: "borrow", args: [BigInt(id), parseUnits(amount, loan.decimals)] });
