@@ -36,6 +36,26 @@
       "morphoMarketId": "0x09cf702bb8b6fe8c6effb6021744e365f598b89bc28f3ea7cd6c55115af825df",
       "oracle": "0x954f55c1278e3Ff5cC0a20cA4cE10c1863e5f230"
     },
+    "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1": {
+      "collateralToken": {
+        "address": "0x280839980a7eD0D7717F64125fE241012E5F5815",
+        "decimals": 18,
+        "name": "Staked trUSD",
+        "symbol": "strUSD"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 860000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 857500000000000000,
+      "morphoMarketId": "0x975c6e8b71073a82216ae464bc44f67d71988450d2542d635d88bc78fca344b1",
+      "oracle": "0x1506c98cE61aC63c8438B710C054a51c5dD9A6A4"
+    },
     "0x13bf541e28081feeaea6f7894e2a9e7e3fae09f3bef554aeecba013020ef88ef": {
       "collateralToken": {
         "address": "0x0B2b2B2076d95dda7817e785989fE353fe955ef9",
