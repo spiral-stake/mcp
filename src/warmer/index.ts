@@ -18,7 +18,7 @@ import { fetchDefillamaChart, type DefillamaPoint } from "../sources/defillama.t
 import { fetchRoycoVaultApy, fetchRoycoVaultApyHistory } from "../sources/royco.ts";
 import { fetchAllMorphoMarketsData, fetchAllBorrowApyHistories } from "../sources/morpho.ts";
 import { fetchMerklIncentiveData } from "../sources/merkl.ts";
-import { fetchTokenPrices } from "../sources/coingecko.ts";
+import { fetchTokenPricesResilient } from "../sources/prices.ts";
 import { fetchExitLiquidity, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import {
   fetchStUSDApy,
@@ -32,6 +32,27 @@ import { registries } from "../data/markets.ts";
 // Max jobs fetched concurrently during the initial prime — caps the cold-start burst so upstreams
 // (and constrained hosts) aren't hit by every job at once. Steady-state refreshes are unaffected.
 const PRIME_CONCURRENCY = 3;
+
+// Tokens needing a USD price (loan tokens + PT underlyings), UNIONED across every supported chain
+// and computed once. Each chain's `prices` job requests this identical set, so the cross-chain
+// dedupe in sources/prices.ts collapses them to ONE CoinGecko call per cycle. Per-chain PT
+// underlyings would otherwise make the id sets differ and defeat the dedupe — the exact regression
+// that pushed usage to ~17.3k vs the 10k/month Demo cap. Cost stays flat as chains are added.
+const UNION_PRICE_TOKENS: { address: string; coingeckoId?: string }[] = (() => {
+  const byAddress = new Map<string, { address: string; coingeckoId?: string }>();
+  for (const t of registries.loanTokens) {
+    byAddress.set(t.address.toLowerCase(), { address: t.address, coingeckoId: t.coingeckoId });
+  }
+  for (const chainId of SUPPORTED_CHAIN_IDS) {
+    for (const m of readMarkets(chainId)) {
+      const u = m.collateralToken.underlying;
+      if (m.collateralToken.isPt && u?.coingeckoId) {
+        byAddress.set(u.address.toLowerCase(), { address: u.address, coingeckoId: u.coingeckoId });
+      }
+    }
+  }
+  return [...byAddress.values()];
+})();
 
 export interface WarmJob {
   name: string;
@@ -71,17 +92,6 @@ export class Warmer {
     const hasStUSDS = markets.some((m) => isStUSDS(m.collateralToken.address));
     const hasSpUSDG = markets.some((m) => isSpUSDG(m.collateralToken.address));
 
-    // Every token that needs a USD price (loan tokens + PT underlyings), mirroring FlashLeverage.
-    const priceTokens: { address: string; coingeckoId?: string }[] = [
-      ...registries.loanTokens.map((t) => ({ address: t.address, coingeckoId: t.coingeckoId })),
-      ...markets
-        .filter((m) => m.collateralToken.isPt && m.collateralToken.underlying?.coingeckoId)
-        .map((m) => ({
-          address: m.collateralToken.underlying!.address,
-          coingeckoId: m.collateralToken.underlying!.coingeckoId!,
-        })),
-    ];
-
     const jobs: WarmJob[] = [
       {
         name: "morpho-markets",
@@ -108,11 +118,17 @@ export class Warmer {
         // NOT required: prices only affect USD *display* values, not LTV/leverage/liquidation math.
         // A CoinGecko outage must degrade USD values (the store serves last-good, and priceOf falls
         // back to 1 — exactly what the app does) rather than 503 every strategy read.
+        //
+        // "Not required" is only survivable if the job actually primes, though. Every chain requests
+        // the SAME id set (UNION_PRICE_TOKENS), so the cross-chain dedupe in sources/prices.ts
+        // collapses all chains to ONE CoinGecko call / 5 min (~8.6k/month, under the 10k Demo cap).
+        // fetchTokenPricesResilient also falls back to keyless DeFiLlama, so exhausting one provider
+        // can no longer leave the store empty. See sources/prices.ts.
         name: "prices",
         key: KEYS.prices(chainId),
         policy: POLICY.prices,
         required: false,
-        run: () => fetchTokenPrices(priceTokens),
+        run: () => fetchTokenPricesResilient(UNION_PRICE_TOKENS),
       },
       {
         name: "stablewatch-apy",
