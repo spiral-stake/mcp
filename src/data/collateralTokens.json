@@ -981,6 +981,23 @@
     "twitter": "https://x.com/USDai_Official",
     "project": "USD.AI"
   },
+  "0x280839980a7eD0D7717F64125fE241012E5F5815": {
+    "name": "Staked trUSD",
+    "symbol": "strUSD",
+    "underlyingCollateral": "trUSD",
+    "yieldSource": "Delta-Neutral Trading",
+    "category": "stable",
+    "coingeckoId": "tori-staked-trusd",
+    "defillamaId": "e7fdda30-ce71-5dea-8b3a-dd43de77ce55",
+    "description": "strUSD is the staked, yield-bearing version of trUSD, Tori Finance's synthetic dollar collateralized by the protocol's on-chain trading positions and redeemable for USDC or USDT by eligible users. trUSD is staked to mint strUSD, whose exchange rate against trUSD rises with the performance of Tori's delta-neutral strategies, which hold no directional view on crypto prices.",
+    "website": "https://tori.finance",
+    "twitter": "https://x.com/tori_finance",
+    "project": "Tori Finance",
+    "exitSlippage100k": 0.14,
+    "exitSlippage500k": 0.14,
+    "exitSlippage1M": 0.14,
+    "exitSlippage5M": 29.73
+  },
   "0xae78736Cd615f374D3085123A210448E74Fc6393": {
     "name": "Rocket Pool ETH",
     "symbol": "rETH",
