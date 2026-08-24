@@ -1,4 +1,4 @@
-// Locks the fund-critical swap routing: the Pendle 10 bps currency_in fee, the KyberSwap fee params,
+// Locks the fund-critical swap routing: the Pendle 5 bps currency_in fee, the KyberSwap fee params,
 // per-chain routing (ethereum / robinhood), native-token mapping, and the chargeFee toggle. A
 // regression here silently loses protocol fees or routes to the wrong chain, so it is CI-guarded.
 import { vi, describe, it, expect, beforeEach } from "vitest";
@@ -24,7 +24,7 @@ beforeEach(() => {
 });
 
 describe("getSwapData — Pendle (PT collateral)", () => {
-  it("routes to /v3/sdk/{chainId}/convert with the 10 bps currency_in fee", async () => {
+  it("routes to /v3/sdk/{chainId}/convert with the 5 bps currency_in fee", async () => {
     vi.mocked(postJson).mockResolvedValue(PENDLE);
     const res = await getSwapData(1, true, "0xRecv", "0xIn", "0xPT", 1000n, 0.005);
 
@@ -32,7 +32,7 @@ describe("getSwapData — Pendle (PT collateral)", () => {
     expect(url).toBe("https://api-v2.pendle.finance/core/v3/sdk/1/convert");
     expect((body as any).kyberSwapParams.routes).toEqual({
       chargeFeeBy: "currency_in",
-      feeAmount: "10",
+      feeAmount: "5",
       feeReceiver: FEE,
       isInBps: true,
     });
@@ -62,7 +62,7 @@ describe("getSwapData — KyberSwap (non-PT)", () => {
     expect(routesUrl).toContain("/ethereum/api/v1/routes");
     expect(routesUrl).toContain("chargeFeeBy=currency_in");
     expect(routesUrl).toContain(`feeReceiver=${FEE}`);
-    expect(routesUrl).toContain("feeAmount=10");
+    expect(routesUrl).toContain("feeAmount=5");
     expect(routesUrl).toContain("isInBps=true");
 
     // build POST spreads the inner routeData and encodes slippage as bps-of-bps (x10000).

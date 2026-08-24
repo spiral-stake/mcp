@@ -69,7 +69,7 @@ export async function getSwapData(
     };
     if (chargeFee && feeReceiver) {
       body.kyberSwapParams = {
-        routes: { chargeFeeBy: "currency_in", feeAmount: "10", feeReceiver, isInBps: true },
+        routes: { chargeFeeBy: "currency_in", feeAmount: "5", feeReceiver, isInBps: true },
       };
     }
     const res = await postJson<{ routes?: PendleRoute[] }>(
@@ -205,7 +205,9 @@ async function callOpenOcean(
   });
   if (feeReceiver) {
     q.set("referrer", feeReceiver);
-    q.set("referrerFee", "0.1"); // 0.1% = 10 bps, charged on the input token (matches KyberSwap)
+    // 0.0625% = 6.25 bps on the input token. OpenOcean keeps 20% of the referral fee, so 6.25 bps
+    // nets the protocol exactly 5 bps (6.25 × 0.80) — the same take as the 5 bps KyberSwap charges.
+    q.set("referrerFee", "0.0625");
   }
 
   const res = await getJson<{ data?: OpenOceanSwap }>(`${OPENOCEAN_URL}/v4/${chainCode}/swap?${q}`, {
@@ -246,7 +248,7 @@ async function callKyberswap(
     q.set("isInBps", "true");
     q.set("chargeFeeBy", "currency_in");
     q.set("feeReceiver", feeReceiver);
-    q.set("feeAmount", "10"); // 10 bps = 0.1%
+    q.set("feeAmount", "5"); // 5 bps = 0.05% (KyberSwap takes no cut → protocol nets 5 bps)
   }
   const routes = await getJson<KyberRoutes>(`${KYBERSWAP_URL}/${chainName}/api/v1/routes?${q}`, {
     source: "kyberswap-routes",
