@@ -89,19 +89,19 @@ export function isExitThin(info?: ExitSlippageFields): boolean {
 export const EXIT_LIQUIDITY_META: Record<ExitLiquidityTier, { label: string; hint: string }> = {
   deep: {
     label: "Deep",
-    hint: "Deep exit liquidity — $5M+ of collateral swaps out with minimal slippage.",
+    hint: "Deep DEX liquidity — $5M+ of collateral swaps out with minimal slippage at exit.",
   },
   good: {
     label: "Good",
-    hint: "Healthy exit liquidity — ~$1M of collateral swaps out cleanly.",
+    hint: "Good DEX liquidity — ~$1M of collateral swaps out cleanly at exit.",
   },
   limited: {
     label: "Limited",
-    hint: "Limited exit liquidity — ~$500k swaps cleanly; larger sizes slip more.",
+    hint: "Limited DEX liquidity — ~$500k swaps cleanly at exit; larger sizes slip more.",
   },
   thin: {
     label: "Thin",
-    hint: "Thin exit liquidity — ~$100k swaps cleanly, but larger sizes may slip more.",
+    hint: "Thin DEX liquidity — ~$100k swaps cleanly at exit, but larger sizes may slip more.",
   },
-  unknown: { label: "", hint: "Exit liquidity not measured yet." },
+  unknown: { label: "", hint: "DEX liquidity not measured yet." },
 };
