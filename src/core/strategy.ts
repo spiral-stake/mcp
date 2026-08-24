@@ -26,6 +26,14 @@ import { composeSnapshot, apySourceKey, type ComposedMarket, type ComposedSnapsh
 
 const APP_BASE = "https://app.spiralstake.xyz";
 
+// Tori Finance "cores" — an off-chain points program on strUSD collateral. Pure rate only (5/day per
+// token, in Tori's terms); the live accrued total per position is portfolio-level and Tori's /points
+// endpoint is IP-rate-limited, so it stays client-side. Cores accrue to the position's proxy on the
+// LEVERAGED balance, so effective = 5 x leverage x tokens deposited. Mirrors the app's tori.ts.
+const TORI_CORES_PER_TOKEN = 5;
+const TORI_COLLATERAL = new Set(["0x280839980a7ed0d7717f64125fe241012e5f5815"]); // strUSD, mainnet
+const isToriCollateral = (address: string): boolean => TORI_COLLATERAL.has(address.toLowerCase());
+
 // ── ladder ────────────────────────────────────────────────────────────────────
 // Integer leverage steps 1x, 2x, … up to floor(maxLeverage), then always append the exact max.
 // Each step's LTV = (1 - 1/lev)·100; its APY uses the same leverage.ts the app runs live.
@@ -219,6 +227,9 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
     collateralApySource: apySource,
     ...(collateralIncentive ? { collateralIncentive } : {}),
     yieldSustainabilityPct,
+    ...(isToriCollateral(market.collateralToken.address)
+      ? { pointsIncentive: { program: "Tori Cores", perDayPerCollateralToken: TORI_CORES_PER_TOKEN } }
+      : {}),
 
     borrowApyPct: market.borrowApy,
     quarterlyBorrowApyPct: market.quarterlyBorrowApy,

@@ -18,13 +18,13 @@ import BigNumber from "bignumber.js";
 import { type Abi, encodeFunctionData } from "viem";
 import flashLeverageJson from "../abi/FlashLeverage.sol/FlashLeverage.json" with { type: "json" };
 import flashLeverageRouterJson from "../abi/FlashLeverageRouter.sol/FlashLeverageRouter.json" with { type: "json" };
-import { calcFlashLoanAmount, calcLeverage, calcLeverageApy, calcLtv } from "../core/leverage.ts";
+import { calcFlashLoanAmount, calcLeverage, calcLeverageApy, calcLtv, oracleReferenceOut } from "../core/leverage.ts";
 import { formatUnits, parseUnits } from "../core/formatUnits.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
 import { readAddresses, readToken } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
-import { getSwapData, type SwapData, type SwapResult } from "./swap.ts";
+import { getSwapData, type SwapData, type SwapResult, type SwapSource } from "./swap.ts";
 import { buildApproveCalls, type Call } from "./approve.ts";
 import { buildReallocateParams } from "./reallocate.ts";
 import { openSigningUrl } from "./appLink.ts";
@@ -69,6 +69,8 @@ export interface PositionPreview {
   amountLeveragedCollateral: string;
   expectedLeverageApy: string;
   priceImpactPct: string;
+  /** Which aggregator won the leverage-swap race (KyberSwap/OpenOcean/Pendle). */
+  swapSource: SwapSource;
 }
 
 export interface SimulateLeverageResult {
@@ -205,14 +207,14 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
     amountFlashLoan = calcFlashLoanAmount(desiredLtv, market, input.amount);
   } else {
     const amountIn = parseUnits(input.amount, payToken.decimals);
-    const ext = await getSwapData(chainId, isPt, routerAddress, payToken.address, market.collateralToken.address, amountIn, slippage);
+    const ext = await getSwapData(chainId, isPt, routerAddress, payToken.address, market.collateralToken.address, amountIn, slippage, true, oracleReferenceOut(market, payToken.address, amountIn, market.collateralToken.address));
     externalSwapData = ext.swapData;
     externalMinTokenOut = BigInt(BigNumber(ext.amountOut.toString()).multipliedBy(slippageFactor).toFixed(0));
     amountSwappedCollateral = formatUnits(ext.amountOut, market.collateralToken.decimals).toString();
     amountFlashLoan = calcFlashLoanAmount(desiredLtv, market, amountSwappedCollateral);
   }
 
-  const leverageSwap = await getSwapData(chainId, isPt, flashLeverageAddress, market.loanToken.address, market.collateralToken.address, amountFlashLoan, slippage);
+  const leverageSwap = await getSwapData(chainId, isPt, flashLeverageAddress, market.loanToken.address, market.collateralToken.address, amountFlashLoan, slippage, true, oracleReferenceOut(market, market.loanToken.address, amountFlashLoan, market.collateralToken.address));
   const minTokenOut = BigInt(BigNumber(leverageSwap.amountOut.toString()).multipliedBy(slippageFactor).toFixed(0));
 
   // 3. leverageParams — identical shape to the app / the FlashLeverage ABI tuple.
@@ -235,14 +237,12 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
   // 5. Position preview (deterministic from params) + price impact.
   const totalCollateral = formatUnits(leverageSwap.amountOut, market.collateralToken.decimals).plus(amountSwappedCollateral ?? input.amount);
   const effectiveLtv = calcLtv(totalCollateral, formatUnits(amountFlashLoan, market.loanToken.decimals), market.collateralTokenValueInLoanToken);
-  let priceImpactPct: string;
-  if (leverageSwap.priceImpact !== undefined) {
-    priceImpactPct = leverageSwap.priceImpact.toFixed(2);
-  } else {
-    const inUsd = formatUnits(amountFlashLoan, market.loanToken.decimals).multipliedBy(market.loanToken.valueInUsd);
-    const outUsd = formatUnits(leverageSwap.amountOut, market.collateralToken.decimals).multipliedBy(market.collateralToken.valueInUsd);
-    priceImpactPct = inUsd.isZero() ? "0.00" : inUsd.minus(outUsd).div(inUsd).multipliedBy(100).toFixed(2);
-  }
+  // Price impact from the app's own token prices — one formula for every venue. Venue-reported
+  // impact is unreliable (KyberSwap misprices some stables in routeSummary; OpenOcean can report
+  // positive impact on a gaining quote), so we never trust it.
+  const inUsd = formatUnits(amountFlashLoan, market.loanToken.decimals).multipliedBy(market.loanToken.valueInUsd);
+  const outUsd = formatUnits(leverageSwap.amountOut, market.collateralToken.decimals).multipliedBy(market.collateralToken.valueInUsd);
+  const priceImpactPct = inUsd.isZero() ? "0.00" : inUsd.minus(outUsd).div(inUsd).multipliedBy(100).toFixed(2);
 
   const preview: PositionPreview = {
     leverage: calcLeverage(desiredLtv),
@@ -261,6 +261,7 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
       desiredLtv,
     ),
     priceImpactPct,
+    swapSource: leverageSwap.source,
   };
 
   return {

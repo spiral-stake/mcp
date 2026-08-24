@@ -1,6 +1,34 @@
 import BigNumber from "bignumber.js";
-import { parseUnits } from "./formatUnits";
+import { parseUnits, formatUnits } from "./formatUnits";
 import { Market, LeveragePosition } from "../types";
+
+// Expected tokenOut (raw) for a collateral<->loan swap, from the on-chain oracle rate
+// (collateralTokenValueInLoanToken = loan tokens per 1 collateral). Returns undefined for any other
+// pair (e.g. a third-party pay token) — that swap's OpenOcean-only quote then stays unvalidated. Feeds
+// getSwapData's `referenceOut`, which bounds an OpenOcean-only quote when KyberSwap is down.
+export function oracleReferenceOut(
+  market: Market,
+  tokenIn: string,
+  amountInRaw: bigint | string,
+  tokenOut: string,
+): bigint | undefined {
+  const loan = market.loanToken;
+  const coll = market.collateralToken;
+  const rate = market.collateralTokenValueInLoanToken; // loan tokens per 1 collateral
+  if (!rate || rate.isZero()) return undefined;
+  const raw = BigInt(amountInRaw);
+  const inA = tokenIn.toLowerCase();
+  const outA = tokenOut.toLowerCase();
+  if (inA === loan.address.toLowerCase() && outA === coll.address.toLowerCase()) {
+    const collWhole = formatUnits(raw, loan.decimals).div(rate);
+    return parseUnits(collWhole.toFixed(coll.decimals, BigNumber.ROUND_DOWN), coll.decimals);
+  }
+  if (inA === coll.address.toLowerCase() && outA === loan.address.toLowerCase()) {
+    const loanWhole = formatUnits(raw, coll.decimals).multipliedBy(rate);
+    return parseUnits(loanWhole.toFixed(loan.decimals, BigNumber.ROUND_DOWN), loan.decimals);
+  }
+  return undefined;
+}
 
 export function calcLtv(
   amountCollateral: BigNumber,

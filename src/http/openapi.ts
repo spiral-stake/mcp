@@ -35,6 +35,15 @@ export function openApiSpec() {
       collateralApyPct: { type: "string" },
       collateralApySource: { type: "string", enum: ["pendle", "defillama", "royco", "stablewatch", "onchain", "none"] },
       yieldSustainabilityPct: { type: "object" },
+      pointsIncentive: {
+        type: "object",
+        nullable: true,
+        description: "Off-chain points program on the collateral (e.g. Tori Cores). Not a yield. Accrues to the position proxy on the leveraged balance: effective = perDayPerCollateralToken x leverage x tokens.",
+        properties: {
+          program: { type: "string", example: "Tori Cores" },
+          perDayPerCollateralToken: { type: "number", example: 5 },
+        },
+      },
       borrowApyPct: { type: "string" },
       quarterlyBorrowApyPct: { type: "string" },
       borrowIncentive: { type: "object", nullable: true },
@@ -121,6 +130,7 @@ export function openApiSpec() {
       amountLeveragedCollateral: { type: "string" },
       expectedLeverageApy: { type: "string", example: "5.64" },
       priceImpactPct: { type: "string", example: "0.07" },
+      swapSource: { type: "string", enum: ["KyberSwap", "OpenOcean", "Pendle"], example: "KyberSwap" },
     },
   };
   const unsignedTxBundle = {

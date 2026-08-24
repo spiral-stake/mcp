@@ -23,6 +23,7 @@ import { readAddresses } from "../data/markets.ts";
 import { getSwapData } from "./swap.ts";
 import { buildApproveCalls, type Call } from "./approve.ts";
 import { resolvePayToken, type ResolvedToken } from "./buildLeverage.ts";
+import { oracleReferenceOut } from "../core/leverage.ts";
 import { portfolioSigningUrl } from "./appLink.ts";
 import { readManagePosition, type ManagePosition } from "./positions.ts";
 import type { LeveragePosition } from "../types/index.ts";
@@ -153,7 +154,7 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
   switch (action) {
     case "close": {
       // Swap the entire collateral back to the loan token, repay the debt, return the remainder.
-      const swap = await getSwapData(chainId, collateral.isPt, flashLeverageAddress, collateral.address, loan.address, pos.collateralRaw, slippage, false);
+      const swap = await getSwapData(chainId, collateral.isPt, flashLeverageAddress, collateral.address, loan.address, pos.collateralRaw, slippage, false, oracleReferenceOut(market, collateral.address, pos.collateralRaw, loan.address));
       minTokenOut = minOut(swap.amountOut);
       to = flashLeverageAddress;
       contractFn = "deleverage";
@@ -166,7 +167,7 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
       const position = { amountLeveragedCollateral: pos.amountLeveragedCollateral, amountLoan: pos.amountLoan, market } as unknown as LeveragePosition;
       amountFlashLoan = calcIncreaseLeverageFlashLoanAmount(desiredLtv, position);
       if (amountFlashLoan <= 0n) throw new Error("Target LTV is not above the current LTV — nothing to borrow");
-      const swap = await getSwapData(chainId, collateral.isPt, flashLeverageAddress, loan.address, collateral.address, amountFlashLoan, slippage, false);
+      const swap = await getSwapData(chainId, collateral.isPt, flashLeverageAddress, loan.address, collateral.address, amountFlashLoan, slippage, false, oracleReferenceOut(market, loan.address, amountFlashLoan, collateral.address));
       minTokenOut = minOut(swap.amountOut);
       to = flashLeverageAddress;
       contractFn = "increaseLeverage";
@@ -185,7 +186,7 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
       } else {
         // Zap: swap payToken -> collateral via the router.
         const amountIn = parseUnits(amount, payTokenResolved.decimals);
-        const swap = await getSwapData(chainId, collateral.isPt, routerAddress, payTokenResolved.address, collateral.address, amountIn, slippage);
+        const swap = await getSwapData(chainId, collateral.isPt, routerAddress, payTokenResolved.address, collateral.address, amountIn, slippage, true, oracleReferenceOut(market, payTokenResolved.address, amountIn, collateral.address));
         minTokenOut = minOut(swap.amountOut);
         to = routerAddress;
         contractFn = "swapAndSupplyCollateral";
@@ -208,7 +209,7 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
       } else {
         // Zap: swap payToken -> loan via the router (loan token is never a PT, so isPt=false).
         const amountIn = parseUnits(amount, payTokenResolved.decimals);
-        const swap = await getSwapData(chainId, false, routerAddress, payTokenResolved.address, loan.address, amountIn, slippage);
+        const swap = await getSwapData(chainId, false, routerAddress, payTokenResolved.address, loan.address, amountIn, slippage, true, oracleReferenceOut(market, payTokenResolved.address, amountIn, loan.address));
         minTokenOut = minOut(swap.amountOut);
         to = routerAddress;
         contractFn = "swapAndRepay";

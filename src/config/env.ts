@@ -64,6 +64,12 @@ const schema = z.object({
   // Absent → no fee charged (chargeFee falls through), matching the app when unset.
   FEE_RECEIVER: z.string().optional(),
 
+  // OpenOcean aggregator (mainnet only) — raced against KyberSwap for best execution. The Pro
+  // endpoint needs an `apikey` header. Presence of this key is the on/off switch: absent → KyberSwap
+  // only, behaviour unchanged. Configure it ONLY after its router (0x6352…e64) is whitelisted on-chain
+  // via FlashLeverage.setSwapRouter — until then a winning OpenOcean quote would revert.
+  OPENOCEAN_API_KEY: z.string().optional(),
+
   // Partner integration API (neobanks). A JSON array of { id, name, keyHash, rateLimitPerMin?, tier? }
   // where keyHash is the SHA-256 hex of the issued key (raw keys never touch config). Absent/empty →
   // the partner surface is dormant and the public/agent behaviour is unchanged.

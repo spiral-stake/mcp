@@ -83,6 +83,11 @@ export interface Strategy {
   collateralApySource: string; // pendle|defillama|royco|stablewatch|onchain
   collateralIncentive?: BorrowIncentive; // MORPHOCOLLATERAL reward; already folded into leverageLadder
   yieldSustainabilityPct?: { avg30d?: PctString; avg60d?: PctString; avg90d?: PctString };
+  // Off-chain points program on the collateral (e.g. Tori "cores"). NOT a yield — points carry no
+  // token value, so they are excluded from every APY here. They accrue to the position's proxy on the
+  // LEVERAGED collateral balance, so effective rate = perDayPerCollateralToken x leverage x tokens.
+  // Rate only; the live accrued total per position is portfolio-level and not exposed here.
+  pointsIncentive?: { program: string; perDayPerCollateralToken: number };
 
   // borrow facts (raw)
   borrowApyPct: PctString;

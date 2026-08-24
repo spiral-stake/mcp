@@ -43,6 +43,8 @@ const out =
     `COINGECKO_API_KEY=${get("VITE_COINGECKO_API_KEY")}`,
     `ROYCO_API_KEY=${get("VITE_ROYCO_API_KEY")}`,
     `STABLEWATCH_API_KEY=${get("VITE_STABLEWATCH_API_KEY")}`,
+    `FEE_RECEIVER=${get("VITE_FEE_RECEIVER")}`,
+    `OPENOCEAN_API_KEY=${get("VITE_OPENOCEAN_API_KEY")}`,
     "",
   ].join("\n");
 
