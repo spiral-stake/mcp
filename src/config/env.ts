@@ -70,6 +70,15 @@ const schema = z.object({
   // via FlashLeverage.setSwapRouter — until then a winning OpenOcean quote would revert.
   OPENOCEAN_API_KEY: z.string().optional(),
 
+  // Kill switch for the OpenOcean race, independent of the key. Default on; set OPENOCEAN_ENABLED=false
+  // to fall back to KyberSwap-only WITHOUT removing OPENOCEAN_API_KEY (so it can be flipped back on
+  // instantly). Absent → enabled, behaviour unchanged. Note the key is still the hard gate: no key →
+  // no race regardless of this flag.
+  OPENOCEAN_ENABLED: z
+    .string()
+    .default("true")
+    .transform((s) => s.toLowerCase() !== "false"),
+
   // Partner integration API (neobanks). A JSON array of { id, name, keyHash, rateLimitPerMin?, tier? }
   // where keyHash is the SHA-256 hex of the issued key (raw keys never touch config). Absent/empty →
   // the partner surface is dormant and the public/agent behaviour is unchanged.

@@ -95,9 +95,10 @@ export async function getSwapData(
   const fee = chargeFee ? feeReceiver : undefined;
 
   // Mainnet: race KyberSwap + OpenOcean and take the better amountOut for the user. Gated on the
-  // OpenOcean key being configured (its router must be whitelisted on-chain first); Robinhood stays
-  // KyberSwap-only (OpenOcean doesn't support it).
-  if (chainId === 1 && env.OPENOCEAN_API_KEY) {
+  // OpenOcean key being configured (its router must be whitelisted on-chain first) AND the
+  // OPENOCEAN_ENABLED kill switch; either off → KyberSwap only. Robinhood stays KyberSwap-only
+  // (OpenOcean doesn't support it).
+  if (chainId === 1 && env.OPENOCEAN_API_KEY && env.OPENOCEAN_ENABLED) {
     return pickBestSwap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, fee, referenceOut);
   }
   return callKyberswap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, fee);
