@@ -105,6 +105,10 @@ export interface EquityVaultInfo {
   stockBorrowApyPct: string; // live USDG borrow APR on the stock market
   netApyPct: string; // = (targetLtv/100) x (yieldLegApy - stockBorrowApy); live, can be negative
   stockPriceUsd: string; // live stock price
+  // The client needs these to encode the Leg-1 Morpho calls directly — the synthetic Market's own
+  // `marketParams` are the yield market's (cloned), NOT the stock market's.
+  morpho: string; // Morpho singleton on this chain
+  stockMarketParams: { loanToken: string; collateralToken: string; oracle: string; irm: string; lltv: string };
 }
 
 export interface MarketCurator {

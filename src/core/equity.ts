@@ -106,6 +106,14 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
         stockBorrowApyPct: raw.borrowApyPct,
         netApyPct: netApy,
         stockPriceUsd: stockPriceUsd.toFixed(4),
+        morpho: v.morpho,
+        stockMarketParams: {
+          loanToken: v.loanToken.address,
+          collateralToken: v.stock.address,
+          oracle: v.stock.oracle,
+          irm: v.irm,
+          lltv: v.lltvRaw,
+        },
       },
     });
   }
