@@ -241,8 +241,9 @@ export class Warmer {
       });
     }
     // Equity vaults: warm each stock market's borrow APR + liquidity + price. Not required (a
-    // stock-market fetch failure hides the equity card rather than blocking /ready).
-    if (equityVaultsFor(chainId).length > 0) {
+    // stock-market fetch failure hides the equity card rather than blocking /ready). Gated OFF by
+    // default — no fetch, and buildEquityMarkets emits nothing, until the client funds-path ships.
+    if (env.EQUITY_VAULTS_ENABLED && equityVaultsFor(chainId).length > 0) {
       jobs.push({
         name: "equity-markets",
         key: KEYS.equityMarkets(chainId),

@@ -70,6 +70,15 @@ const schema = z.object({
   // via FlashLeverage.setSwapRouter — until then a winning OpenOcean quote would revert.
   OPENOCEAN_API_KEY: z.string().optional(),
 
+  // Equity vaults (synthetic stock strategies). OFF by default: the strategy must NOT appear on any
+  // surface until the client's equity render + composite open/exit are built and simulated, or a
+  // user could deposit through the wrong (standard-leverage) flow. Flip to true only when the full
+  // client funds-path ships. See data/equityVaults.ts, core/equity.ts.
+  EQUITY_VAULTS_ENABLED: z
+    .string()
+    .default("false")
+    .transform((s) => s.toLowerCase() === "true"),
+
   // Kill switch for the OpenOcean race, independent of the key. Default on; set OPENOCEAN_ENABLED=false
   // to fall back to KyberSwap-only WITHOUT removing OPENOCEAN_API_KEY (so it can be flipped back on
   // instantly). Absent → enabled, behaviour unchanged. Note the key is still the hard gate: no key →

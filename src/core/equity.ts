@@ -8,6 +8,7 @@ import { Market, CollateralToken, TokenCategory } from "../types/index.ts";
 import { equityVaultsFor } from "../data/equityVaults.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "./../cache/policy.ts";
+import { env } from "../config/env.ts";
 import type { EquityMarketRaw } from "../sources/equity.ts";
 
 /**
@@ -15,6 +16,7 @@ import type { EquityMarketRaw } from "../sources/equity.ts";
  * yet or whose yield market is missing from `allMarkets` — a broken/half card is never shown.
  */
 export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Market[] {
+  if (!env.EQUITY_VAULTS_ENABLED) return []; // OFF by default — do not expose until the client funds-path ships.
   const vaults = equityVaultsFor(chainId);
   if (vaults.length === 0) return [];
 
@@ -62,7 +64,9 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
     out.push({
       ...yieldMarket,
       morphoMarketId: v.id,
-      correlated: false,
+      // Surfaced under the Yield profile (dollar-yield product) — correlated=true makes the card
+      // link to profile=yield and render yield-style (APY-forward) labels.
+      correlated: true,
       collateralToken,
       // loanToken stays the yield market's USDG.
       borrowApy: raw.borrowApyPct,
