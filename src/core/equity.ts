@@ -93,9 +93,19 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
       oracleType: undefined,
       curators: undefined,
       visible: true,
-      // The stock market's borrow-side liquidity is the vault's scaling ceiling — surface it here.
+      // Liquidity: the SPY stock market's real borrow-side depth — the vault's scaling ceiling. EVERY
+      // liquidity field is overridden, not just the USD one: the clone carries the syrup market's
+      // ~$9M, but the display ("available to borrow" reads paLiquidityAssets) and the deposit cap
+      // (liquidityAssetsParsed) must reflect the STOCK market. The equity open borrows straight from
+      // the stock market with no public-allocator path, so paLiquidityAssets == base liquidity and
+      // there are no shared-liquidity sources.
       liquidityAssetsUsd: raw.liquidityUsd,
+      liquidityAssetsParsed: BigInt(raw.liquidityAssetsParsed),
+      liquidityAssets: BigNumber(raw.liquidityAssetsParsed).div(BigNumber(10).pow(yieldMarket.loanToken.decimals)),
+      paLiquidityAssets: BigNumber(raw.liquidityAssetsParsed).div(BigNumber(10).pow(yieldMarket.loanToken.decimals)),
+      paSharedLiquidity: [],
       supplyAssetsUsd: raw.supplyUsd,
+      supplyAssets: BigNumber(raw.supplyUsd),
       equityVault: {
         stockMarketId: v.stockMarketId,
         targetLtvPct: v.targetLtvPct.toFixed(2),
