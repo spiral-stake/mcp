@@ -20,6 +20,8 @@ import { fetchAllMorphoMarketsData, fetchAllBorrowApyHistories } from "../source
 import { fetchMerklIncentiveData } from "../sources/merkl.ts";
 import { fetchTokenPricesResilient } from "../sources/prices.ts";
 import { fetchExitLiquidity, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
+import { fetchEquityMarketsData } from "../sources/equity.ts";
+import { equityVaultsFor } from "../data/equityVaults.ts";
 import {
   fetchStUSDApy,
   fetchSpUSDGApy,
@@ -236,6 +238,17 @@ export class Warmer {
         policy: POLICY.onchainApy,
         required: false,
         run: () => fetchSpUSDGApy(),
+      });
+    }
+    // Equity vaults: warm each stock market's borrow APR + liquidity + price. Not required (a
+    // stock-market fetch failure hides the equity card rather than blocking /ready).
+    if (equityVaultsFor(chainId).length > 0) {
+      jobs.push({
+        name: "equity-markets",
+        key: KEYS.equityMarkets(chainId),
+        policy: POLICY.equityMarkets,
+        required: false,
+        run: () => fetchEquityMarketsData(chainId),
       });
     }
     return jobs;

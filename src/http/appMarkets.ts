@@ -4,6 +4,7 @@
 // so the app revives them with exact precision (liquidation-price / leverage math depend on it).
 import BigNumber from "bignumber.js";
 import { composeSnapshot } from "../core/compose.ts";
+import { buildEquityMarkets } from "../core/equity.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 
@@ -34,7 +35,10 @@ function freshnessOf(key: string) {
 
 export function buildAppMarkets(chainId: number) {
   const snap = composeSnapshot(chainId);
-  const markets = snap.markets.map((cm) => cm.market);
+  const loopMarkets = snap.markets.map((cm) => cm.market);
+  // Append synthetic equity-vault strategies (composed from warmed stock-market data + the yield
+  // loop already present in loopMarkets). Empty on chains without equity vaults.
+  const markets = [...loopMarkets, ...buildEquityMarkets(chainId, loopMarkets)];
   return {
     asOf: snap.asOf,
     chainId,

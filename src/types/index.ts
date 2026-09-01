@@ -88,6 +88,23 @@ export interface Market {
   // largest supplying vault's TVL. Sourced in sources/morpho.ts, display-only. undefined = the
   // market has no curated V2 vault supply (renders nothing in the app).
   curators?: MarketCurator[];
+  // Present ONLY on synthetic equity-vault strategies (see data/equityVaults.ts, core/equity.ts).
+  // Its presence is the discriminator: the app renders the equity card/copy and runs the composite
+  // open (swap→stock collateral→borrow USDG→yield loop) instead of the standard single-market loop.
+  equityVault?: EquityVaultInfo;
+}
+
+// The composite config + live economics of an equity vault, carried on the synthetic Market/Strategy.
+export interface EquityVaultInfo {
+  stockMarketId: string; // external Morpho market: stock collateral / USDG loan
+  targetLtvPct: string; // borrow ratio on the stock leg
+  liqLtvPct: string; // stock market LLTV (liquidation threshold)
+  yieldMarketId: string; // Spiral yield-loop market the borrowed USDG is deployed into
+  yieldLeverage: string; // leverage applied on the yield loop
+  yieldLegApyPct: string; // live leveraged APY of the yield loop
+  stockBorrowApyPct: string; // live USDG borrow APR on the stock market
+  netApyPct: string; // = (targetLtv/100) x (yieldLegApy - stockBorrowApy); live, can be negative
+  stockPriceUsd: string; // live stock price
 }
 
 export interface MarketCurator {

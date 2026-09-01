@@ -44,6 +44,10 @@ export const POLICY = {
   // Exit-liquidity slippage (Kyberswap quote sweep). Expensive and slow-moving; 12h matches the
   // app's old weekly-ish refresh but automated. 24h stale = one missed cycle of grace.
   exitLiquidity: { refreshEverySec: 12 * H, staleAfterSec: 24 * H } satisfies WarmPolicy,
+
+  // Equity-vault stock markets (external Morpho markets): borrow APR + liquidity (Morpho GraphQL) +
+  // stock price (oracle). Same cadence as morphoMarkets — these rates/liquidity move on the same clock.
+  equityMarkets: { refreshEverySec: 2 * M, staleAfterSec: 5 * M } satisfies WarmPolicy,
 } as const;
 
 // Hard bound on serving last-good data to the APP. The store keeps last-good indefinitely so a
@@ -72,4 +76,5 @@ export const KEYS = {
   prices: (chainId: number) => `prices:coingecko:${chainId}`,
   onchainCollateralValue: (chainId: number) => `onchain:collateralValue:${chainId}`,
   exitLiquidity: (chainId: number) => `exitLiquidity:${chainId}`,
+  equityMarkets: (chainId: number) => `equity:markets:${chainId}`,
 } as const;
