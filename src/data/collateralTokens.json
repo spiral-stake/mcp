@@ -10,6 +10,7 @@
     "website": "https://spark.fi/",
     "twitter": "https://x.com/sparkdotfi",
     "project": "Spark",
+    "defillamaId": "a1371c8f-592f-56d4-a506-7f1530f35a00",
     "noSwapRoute": true,
     "exitSlippage100k": 87.44,
     "exitSlippage500k": 96.35,

@@ -30,8 +30,11 @@ export function resolveTokenApy(
     if (isStUSDS(collateralToken.address) && stUSDSApy) {
       return { apy: stUSDSApy, source: "onchain" };
     }
-    if (isSpUSDG(collateralToken.address) && spUSDGApy) {
-      return { apy: spUSDGApy, source: "onchain" };
+    if (isSpUSDG(collateralToken.address)) {
+      const defillamaData = collateralToken.info.defillamaId ? allDefillamaApy[collateralToken.info.defillamaId] : null;
+      if (defillamaData?.length)
+        return { apy: BigNumber(defillamaData[defillamaData.length - 1].apy).toFixed(2), source: "defillama" };
+      if (spUSDGApy) return { apy: spUSDGApy, source: "onchain" };
     }
 
     if (collateralToken.info.royco) {
