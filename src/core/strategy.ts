@@ -45,12 +45,18 @@ function buildLadder(market: Market): { ladder: LadderPoint[]; maxLeverage: stri
   const maxLeverage = calcLeverage(market.maxLtv); // = calcLeverage(maxLtv)
   const maxLeverageNum = Number(maxLeverage);
 
+  // Honest carry: collateral yield − borrow cost, × leverage, WITHOUT the client's uncorrelated
+  // sign-flip (calcLeverageApy flips longs to a positive pseudo-yield for a "Borrow APY" label the
+  // app shows; agents get the raw signed carry instead — negative for a directional long). Passing
+  // correlated=true forces the un-flipped value for both profiles.
+  const honestLeverageApy = (ltv: string) => calcLeverageApy(true, collateralApy, netBorrow, ltv);
+
   const point = (leverageNum: number, ltvPctNum: number): LadderPoint => {
     const ltv = ltvPctNum.toFixed(2);
     return {
       leverage: BigNumber(leverageNum).toFixed(1),
       ltvPct: BigNumber(ltvPctNum).toFixed(1),
-      leverageApyPct: calcLeverageApy(market.correlated, collateralApy, netBorrow, ltv),
+      leverageApyPct: honestLeverageApy(ltv),
     };
   };
 
@@ -65,15 +71,16 @@ function buildLadder(market: Market): { ladder: LadderPoint[]; maxLeverage: stri
   const maxPoint: LadderPoint = {
     leverage: maxLeverage,
     ltvPct: BigNumber(maxLtv).toFixed(1),
-    leverageApyPct: calcLeverageApy(market.correlated, collateralApy, netBorrow, market.maxLtv),
+    leverageApyPct: honestLeverageApy(market.maxLtv),
   };
   if (ladder[ladder.length - 1]?.leverage !== maxPoint.leverage) ladder.push(maxPoint);
 
-  // Default leverage sits at the app's safeLtv (maxLtv - 0.75).
+  // Default leverage sits at the app's safeLtv (maxLtv - 0.75). Recomputed honestly (not
+  // market.defaultLeverageApy, which carries the app's uncorrelated sign-flip).
   const defaultPoint: LadderPoint = {
     leverage: market.defaultLeverage,
     ltvPct: BigNumber(market.safeLtv).toFixed(1),
-    leverageApyPct: market.defaultLeverageApy,
+    leverageApyPct: honestLeverageApy(market.safeLtv),
   };
 
   return { ladder, maxLeverage, defaultPoint };
@@ -115,10 +122,6 @@ function freshnessFromView(view: FreshView<unknown> | undefined): FreshnessGroup
   return group;
 }
 
-function pct(v: string | undefined): string | undefined {
-  return v === undefined ? undefined : v;
-}
-
 export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Strategy {
   const { market, apySource } = cm;
   const chainId = snapshot.chainId;
@@ -147,17 +150,39 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
     .multipliedBy(market.loanToken.valueInUsd)
     .toNumber();
 
-  // exit liquidity + the single verdict (isolated, with thresholds)
+  // Historical leverage APYs come pre-flipped for longs (computed via the app's calcLeverageApy);
+  // un-flip them so the agent's historical series carries the same honest sign as the ladder.
+  const honestHistorical = (v: string | undefined): string | undefined =>
+    v === undefined ? undefined : market.correlated ? v : BigNumber(v).multipliedBy(-1).toFixed(2);
+
+  // exit liquidity + the Spiral opinion block (isolated, with thresholds). Two overridable hints:
+  // the exit-liquidity tier, and — for uncorrelated markets — how to read the (carry-only) APYs.
   const exitLiquidity = buildExitLiquidity(info);
   const tier = exitLiquidityTier(info);
   const spiralHints =
-    tier === "unknown"
+    tier === "unknown" && market.correlated
       ? undefined
       : {
-          exitLiquidityTier: {
-            value: tier,
-            thresholds: { listingMaxPct: LISTING_MAX_SLIPPAGE, depthCleanMaxPct: DEPTH_MAX_SLIPPAGE },
-          },
+          ...(tier !== "unknown"
+            ? {
+                exitLiquidityTier: {
+                  value: tier,
+                  thresholds: { listingMaxPct: LISTING_MAX_SLIPPAGE, depthCleanMaxPct: DEPTH_MAX_SLIPPAGE },
+                },
+              }
+            : {}),
+          ...(!market.correlated
+            ? {
+                profile: {
+                  value: "leveraged_long",
+                  leverageApyMeaning:
+                    "Directional long. Every leverageApyPct here is the annualized FINANCING CARRY only " +
+                    "(collateralApyPct − netBorrowApyPct, scaled by leverage) and is typically negative; it " +
+                    "excludes the collateral's price change, which dominates P&L. Liquidates if the collateral " +
+                    "falls to ltvPct.liquidation.",
+                },
+              }
+            : {}),
         };
 
   // borrow incentive block — omit entirely when there is none (absent, not zero-noise).
@@ -245,9 +270,9 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
     leverageLadder: ladder,
     defaultLeverage: defaultPoint,
     historicalLeverageApyPct: {
-      avg30d: pct(market.avg30dLeverageApy),
-      avg60d: pct(market.avg60dLeverageApy),
-      avg90d: pct(market.avg90dLeverageApy),
+      avg30d: honestHistorical(market.avg30dLeverageApy),
+      avg60d: honestHistorical(market.avg60dLeverageApy),
+      avg90d: honestHistorical(market.avg90dLeverageApy),
     },
 
     ltvPct: { liquidation: market.liqLtv, max: market.maxLtv },

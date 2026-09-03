@@ -68,6 +68,14 @@ export interface SpiralHints {
     value: string;
     thresholds: { listingMaxPct: number; depthCleanMaxPct: number };
   };
+  // Present only for uncorrelated (directional-long) strategies. Frames how to read the APYs: every
+  // leverageApyPct here is the annualized FINANCING CARRY (collateral yield − borrow cost, × leverage)
+  // and is typically negative — it excludes the collateral's price change, which dominates a long's
+  // P&L. The position liquidates when the collateral falls to ltvPct.liquidation. Overridable opinion.
+  profile?: {
+    value: string; // "leveraged_long"
+    leverageApyMeaning: string;
+  };
 }
 
 export interface Strategy {

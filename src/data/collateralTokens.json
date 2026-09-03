@@ -1,4 +1,64 @@
 {
+  "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": {
+    "name": "Wrapped BTC",
+    "symbol": "WBTC",
+    "underlyingCollateral": "BTC",
+    "yieldSource": "None",
+    "category": "BTC",
+    "coingeckoId": "wrapped-bitcoin",
+    "description": "WBTC is the original wrapped Bitcoin on Ethereum, backed 1:1 by BTC held with BitGo custodians. It brings Bitcoin liquidity on-chain as a widely supported ERC-20, usable as collateral across DeFi.",
+    "website": "https://wbtc.network/",
+    "twitter": "https://x.com/WrappedBTC",
+    "project": "WBTC"
+  },
+  "0xcbB7C0000aB88B473b1f5aFd9ef808440eed33Bf": {
+    "name": "Coinbase Wrapped BTC",
+    "symbol": "cbBTC",
+    "underlyingCollateral": "BTC",
+    "yieldSource": "None",
+    "category": "BTC",
+    "coingeckoId": "coinbase-wrapped-btc",
+    "description": "cbBTC is Coinbase's wrapped Bitcoin, backed 1:1 by BTC held in Coinbase custody. It brings Bitcoin on-chain as a liquid, institutionally custodied ERC-20 usable as collateral across DeFi.",
+    "website": "https://www.coinbase.com/cbtc",
+    "twitter": "https://x.com/coinbase",
+    "project": "Coinbase"
+  },
+  "0x73E0C0d45E048D25Fc26Fa3159b0aA04BfA4Db98": {
+    "name": "Kraken Wrapped Bitcoin",
+    "symbol": "kBTC",
+    "underlyingCollateral": "BTC",
+    "yieldSource": "None",
+    "category": "BTC",
+    "coingeckoId": "kraken-wrapped-btc",
+    "description": "kBTC is Kraken's wrapped Bitcoin, backed 1:1 by BTC held in Kraken's reserves. It brings Bitcoin on-chain as a liquid, composable ERC-20 usable as collateral across DeFi.",
+    "website": "https://www.kraken.com/",
+    "twitter": "https://x.com/krakenfx",
+    "project": "Kraken"
+  },
+  "0x856c4Efb76C1D1AE02e20CEB03A2A6a08b0b8dC3": {
+    "name": "Origin Ether",
+    "symbol": "OETH",
+    "underlyingCollateral": "ETH",
+    "yieldSource": "ETH Staking",
+    "category": "ETH",
+    "coingeckoId": "origin-ether",
+    "description": "OETH (Origin Ether) is a yield-bearing ETH token from Origin Protocol. It earns ETH staking and DeFi yield through automated strategies while tracking the price of ETH, and stays liquid and composable across DeFi.",
+    "website": "https://www.originprotocol.com/oeth",
+    "twitter": "https://x.com/OriginProtocol",
+    "project": "Origin"
+  },
+  "0x68749665FF8D2d112Fa859AA293F07A622782F38": {
+    "name": "Tether Gold",
+    "symbol": "XAUt",
+    "underlyingCollateral": "Gold",
+    "yieldSource": "None",
+    "category": "Other",
+    "coingeckoId": "tether-gold",
+    "description": "XAUt (Tether Gold) is backed 1:1 by physical gold held in Tether's reserves, with each token representing one troy ounce of gold on a London Good Delivery bar. It brings gold price exposure on-chain as a liquid ERC-20.",
+    "website": "https://gold.tether.to/",
+    "twitter": "https://x.com/Tether_to",
+    "project": "Tether Gold"
+  },
   "0xde770c84FE66E063336b31737cFE9790f18c4087": {
     "name": "Spark Savings USDG",
     "symbol": "spUSDG",

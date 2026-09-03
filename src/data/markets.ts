@@ -60,10 +60,10 @@ export function readMarkets(chainId: number): Market[] {
   );
 
   return Object.keys(markets)
-    // Non-correlated (leveraged-long) markets are excluded at the root: the app no longer offers
-    // that profile, and their `leverageApyPct` is a sign-flipped carry cost that misleads agents.
-    // Dropping them here means the warmer never fetches Morpho/oracle/price data for them at all.
-    .filter((marketId) => markets[marketId].correlated)
+    // Both profiles are served: correlated yield loops AND non-correlated (leveraged-long) markets.
+    // Longs are re-framed for agents in core/strategy.ts (leverageApyPct is the honest financing
+    // carry, not a sign-flipped pseudo-yield, plus a spiralHints.profile note). Per-market `visible`
+    // eligibility (route/liquidity/APY) still gates what actually surfaces downstream.
     .map((marketId) => {
     // Deep-ish clone so the shared registries are never mutated across calls (the app relies
     // on a fresh module import per load; the server keeps them resident, so we copy).

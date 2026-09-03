@@ -200,7 +200,11 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     // eligible), but /v1/app/markets keeps ineligible markets so the app can still resolve a
     // portfolio position on one (e.g. a PT that has since crossed into its maturity window).
     market.visible =
-      (Number(market.collateralToken.apy) > 0 ||
+      // A yield loop must actually yield something to be worth listing. A directional long
+      // (uncorrelated) earns from the collateral's price, not an APY — its collateral yield is ~0 by
+      // nature — so the positive-yield requirement only applies to correlated markets.
+      (!market.correlated ||
+        Number(market.collateralToken.apy) > 0 ||
         Number(borrowIncentiveApy) > 0 ||
         Number(collateralIncentiveApy) > 0) &&
       !market.collateralToken.info?.noSwapRoute &&
