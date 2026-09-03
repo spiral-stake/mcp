@@ -1,6 +1,7 @@
 {
   "flashLeverageAddress": "0x27eaF95d39cB07d544026167365689C34B4d3f9A",
   "flashLeverageRouterAddress": "0x5F7550Bfdd7690E1CFe90c8DbB726964f4d34877",
+  "equityRouterAddress": "0x776DF8721162Fb56b2890c6408643F158e0C63b0",
   "markets": {
     "0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114": {
       "collateralToken": {
