@@ -10,6 +10,7 @@ import { avgCollateralApyOverDays, computeAvgLeverageApy } from "./leverageApy.t
 import { isExitNoRoute } from "./exitLiquidity.ts";
 import { readMarkets } from "../data/markets.ts";
 import { env } from "../config/env.ts";
+import { ROBINHOOD_CHAIN_ID } from "../config/chains.ts";
 import { rawStore, type FreshView } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { isStUSDS, isSpUSDG } from "../sources/onchain.ts";
@@ -215,7 +216,11 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       !isExitNoRoute(market.collateralToken.info) &&
       (!market.collateralToken.isPt ||
         (market.collateralToken.maturityDaysLeft ?? 0) > env.PT_MINIMUM_MATURITY_DAYS) &&
-      market.liquidityAssetsUsd > env.MIN_BORROWABLE_USD;
+      // Robinhood-chain exception: keep its (young, thin) markets listed even when borrowable
+      // liquidity is below the floor. The chain is new and liquidity is being bootstrapped, so a
+      // temporarily-maxed market is expected — surface it rather than hide it. NOTE: a leveraged open
+      // still needs available liquidity to borrow, so opens can revert until borrow headroom frees up.
+      (chainId === ROBINHOOD_CHAIN_ID || market.liquidityAssetsUsd > env.MIN_BORROWABLE_USD);
 
     const borrowHistory = borrowHistories[market.morphoMarketId] ?? [];
     market.avg30dLeverageApy = computeAvgLeverageApy(apyHistory, borrowHistory, borrowIncentiveHistory, collateralIncentiveHistory, 30, market);
