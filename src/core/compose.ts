@@ -193,10 +193,11 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       market.safeLtv,
     );
 
-    // Data-dependent eligibility (correlation is already guaranteed by readMarkets). Mirrors the
-    // app's filterMarkets: hide markets with no resolved collateral APY (source "none" emits 0),
-    // no DEX swap route, a PT inside the minimum maturity window, or borrow liquidity below the
-    // usable floor. We TAG rather than drop: /v1/strategies hard-filters on this (agents see only
+    // Data-dependent eligibility (both correlated and uncorrelated markets flow through readMarkets).
+    // Mirrors the app's filterMarkets: hide correlated markets with no resolved collateral APY (source
+    // "none" emits 0) — longs are exempt, their yield is price, not APY — plus, for both profiles: no
+    // DEX swap route, a PT inside the minimum maturity window, or borrow liquidity below the usable
+    // floor. We TAG rather than drop: /v1/strategies hard-filters on this (agents see only
     // eligible), but /v1/app/markets keeps ineligible markets so the app can still resolve a
     // portfolio position on one (e.g. a PT that has since crossed into its maturity window).
     market.visible =

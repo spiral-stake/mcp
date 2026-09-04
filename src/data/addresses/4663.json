@@ -62,6 +62,46 @@
       "maxLtv": 912500000000000000,
       "morphoMarketId": "0xc845da65a020ddca5f132efa8fea79676d8edfdea504226a4c01e7a9e34cddd6",
       "oracle": "0xE64849bd4AD03DfaBbe02bb521de19997a19055f"
+    },
+    "0xaa586d26a6fe62d9c0f0948fede6e2130500ac7a655587447e2d4a37e6330589": {
+      "collateralToken": {
+        "address": "0x63C12667638f2Ae6fC6ae09B43D98Ec84a8586eA",
+        "decimals": 18,
+        "name": "Wrapped Staked NET",
+        "symbol": "wsNET"
+      },
+      "correlated": false,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 625000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 622500000000000000,
+      "morphoMarketId": "0xaa586d26a6fe62d9c0f0948fede6e2130500ac7a655587447e2d4a37e6330589",
+      "oracle": "0xCDE9599059f8Ae6D6B9F33A0aF7877827ec75F16"
+    },
+    "0xaba3ac501ce4c6b80c08ed0dba19e1ac0de495f17af3ed692a38e92d176a6c9e": {
+      "collateralToken": {
+        "address": "0x39dBED3a2bd333467115dE45665cC57F813C4571",
+        "decimals": 18,
+        "name": "Pons",
+        "symbol": "PONS"
+      },
+      "correlated": false,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 385000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 382500000000000000,
+      "morphoMarketId": "0xaba3ac501ce4c6b80c08ed0dba19e1ac0de495f17af3ed692a38e92d176a6c9e",
+      "oracle": "0x935cEeB089C0E76D6820cEa563bAA55dc8D053D0"
     }
   },
   "morphoAddress": "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010"

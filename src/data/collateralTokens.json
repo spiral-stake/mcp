@@ -1,4 +1,28 @@
 {
+  "0x63C12667638f2Ae6fC6ae09B43D98Ec84a8586eA": {
+    "name": "Wrapped Staked NET",
+    "symbol": "wsNET",
+    "underlyingCollateral": "NET",
+    "yieldSource": "NET Staking",
+    "category": "Other",
+    "coingeckoId": null,
+    "description": "wsNET is the wrapped, staked version of NET — the reserve-backed token of NetNet Capital on Robinhood Chain, whose USDG reserves earn treasury yield. Staking NET accrues dividends, and wsNET keeps that staked position liquid and composable as collateral.",
+    "website": "https://netnet.capital/",
+    "twitter": "https://x.com/netnetcap",
+    "project": "NetNet Capital"
+  },
+  "0x39dBED3a2bd333467115dE45665cC57F813C4571": {
+    "name": "Pons",
+    "symbol": "PONS",
+    "underlyingCollateral": "PONS",
+    "yieldSource": "None",
+    "category": "Other",
+    "coingeckoId": null,
+    "description": "PONS is the native token of Pons, the leading non-custodial token launchpad on Robinhood Chain. Protocol trading fees buy back and burn PONS, giving its fixed 1B supply deflationary pressure as launch volume grows.",
+    "website": "https://www.ponsfamily.com/",
+    "twitter": "https://x.com/ponsdotfamily",
+    "project": "Pons"
+  },
   "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": {
     "name": "Wrapped BTC",
     "symbol": "WBTC",
