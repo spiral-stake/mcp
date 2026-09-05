@@ -100,11 +100,11 @@
     "twitter": "https://x.com/sparkdotfi",
     "project": "Spark",
     "defillamaId": "a1371c8f-592f-56d4-a506-7f1530f35a00",
-    "noSwapRoute": true,
-    "exitSlippage100k": 87.44,
-    "exitSlippage500k": 96.35,
-    "exitSlippage1M": 98.06,
-    "exitSlippage5M": 99.59
+    "exitSlippage100k": 0,
+    "exitSlippage500k": 0,
+    "exitSlippage1M": 0,
+    "exitSlippage5M": 0,
+    "exitSlippage10M": 0
   },
   "0x40858070814a57FdF33a613ae84fE0a8b4a874f7": {
     "name": "syrupUSDG",
