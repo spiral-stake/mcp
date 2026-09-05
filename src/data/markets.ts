@@ -60,7 +60,7 @@ export function readMarkets(chainId: number): Market[] {
   );
 
   return Object.keys(markets)
-    // Both profiles are served: correlated yield loops AND non-correlated (leveraged-long) markets.
+    // Both profiles are served: correlated yield loops AND non-correlated (leveraged-perp) markets.
     // Longs are re-framed for agents in core/strategy.ts (leverageApyPct is the honest financing
     // carry, not a sign-flipped pseudo-yield, plus a spiralHints.profile note). Per-market `visible`
     // eligibility (route/liquidity/APY) still gates what actually surfaces downstream.

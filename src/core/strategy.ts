@@ -47,7 +47,7 @@ function buildLadder(market: Market): { ladder: LadderPoint[]; maxLeverage: stri
 
   // Honest carry: collateral yield − borrow cost, × leverage, WITHOUT the client's uncorrelated
   // sign-flip (calcLeverageApy flips longs to a positive pseudo-yield for a "Borrow APY" label the
-  // app shows; agents get the raw signed carry instead — negative for a directional long). Passing
+  // app shows; agents get the raw signed carry instead — negative for a directional perp). Passing
   // correlated=true forces the un-flipped value for both profiles.
   const honestLeverageApy = (ltv: string) => calcLeverageApy(true, collateralApy, netBorrow, ltv);
 
@@ -174,9 +174,9 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
           ...(!market.correlated
             ? {
                 profile: {
-                  value: "leveraged_long",
+                  value: "leveraged_perp",
                   leverageApyMeaning:
-                    "Directional long. Every leverageApyPct here is the annualized FINANCING CARRY only " +
+                    "Directional perp. Every leverageApyPct here is the annualized FINANCING CARRY only " +
                     "(collateralApyPct − netBorrowApyPct, scaled by leverage) and is typically negative; it " +
                     "excludes the collateral's price change, which dominates P&L. Liquidates if the collateral " +
                     "falls to ltvPct.liquidation.",
