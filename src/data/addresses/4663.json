@@ -102,6 +102,26 @@
       "maxLtv": 382500000000000000,
       "morphoMarketId": "0xaba3ac501ce4c6b80c08ed0dba19e1ac0de495f17af3ed692a38e92d176a6c9e",
       "oracle": "0x935cEeB089C0E76D6820cEa563bAA55dc8D053D0"
+    },
+    "0x2e1f79e5579d88b7c8528449fde8abf2499d30761e15431e4034225bb32e43e6": {
+      "collateralToken": {
+        "address": "0x39dBED3a2bd333467115dE45665cC57F813C4571",
+        "decimals": 18,
+        "name": "Pons",
+        "symbol": "PONS"
+      },
+      "correlated": false,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 385000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 382500000000000000,
+      "morphoMarketId": "0x2e1f79e5579d88b7c8528449fde8abf2499d30761e15431e4034225bb32e43e6",
+      "oracle": "0xB2b407AF00e0699ca5b0bD319830baeD4e26A12E"
     }
   },
   "morphoAddress": "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010"
