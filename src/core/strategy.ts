@@ -23,6 +23,17 @@ import type {
   StrategiesEnvelope,
 } from "../types/contract.ts";
 import { composeSnapshot, apySourceKey, type ComposedMarket, type ComposedSnapshot } from "./compose.ts";
+import { buildEquityMarkets } from "./equity.ts";
+
+// Wrap synthetic equity Markets as ComposedMarkets so they map through toStrategy like loop markets.
+// No APY/borrow history (a vault has no leverage-ladder history), and no collateral APY source.
+const equityComposed = (chainId: number, snapshot: ComposedSnapshot): ComposedMarket[] =>
+  buildEquityMarkets(chainId, snapshot.markets.map((cm) => cm.market)).map((market) => ({
+    market,
+    apySource: "none" as const,
+    apyHistory: [],
+    borrowHistory: [],
+  }));
 
 const APP_BASE = "https://app.spiralstake.xyz";
 
@@ -38,6 +49,19 @@ const isToriCollateral = (address: string): boolean => TORI_COLLATERAL.has(addre
 // Integer leverage steps 1x, 2x, … up to floor(maxLeverage), then always append the exact max.
 // Each step's LTV = (1 - 1/lev)·100; its APY uses the same leverage.ts the app runs live.
 function buildLadder(market: Market): { ladder: LadderPoint[]; maxLeverage: string; defaultPoint: LadderPoint } {
+  // Equity vaults are a FIXED composite (deposit USDG → hold the stock + farm the borrowed slice),
+  // not a user-selectable leverage ladder. Their one meaningful return is the net dollar APY, so the
+  // ladder is a single point carrying it — never the fabricated integer steps a stock's 0% collateral
+  // yield minus borrow would otherwise produce. The spiralHints.profile (below) explains the shape.
+  if (market.equityVault) {
+    const point: LadderPoint = {
+      leverage: market.defaultLeverage, // "1" — the deposit isn't multiplied by a user leverage choice
+      ltvPct: BigNumber(market.equityVault.targetLtvPct).toFixed(1), // stock-leg LTV (its liquidation risk)
+      leverageApyPct: market.equityVault.netApyPct, // net dollar APY on the deposit
+    };
+    return { ladder: [point], maxLeverage: market.defaultLeverage, defaultPoint: point };
+  }
+
   // Effective collateral yield = base APY + collateral-side incentive (matches compose's sizing).
   const collateralApy = BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy).toFixed(2);
   const netBorrow = BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2);
@@ -159,8 +183,9 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   // the exit-liquidity tier, and — for uncorrelated markets — how to read the (carry-only) APYs.
   const exitLiquidity = buildExitLiquidity(info);
   const tier = exitLiquidityTier(info);
+  const ev = market.equityVault;
   const spiralHints =
-    tier === "unknown" && market.correlated
+    tier === "unknown" && market.correlated && !ev
       ? undefined
       : {
           ...(tier !== "unknown"
@@ -171,7 +196,19 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
                 },
               }
             : {}),
-          ...(!market.correlated
+          ...(ev
+            ? {
+                profile: {
+                  value: "equity_yield_vault",
+                  leverageApyMeaning:
+                    `Equity + yield vault: deposit USDG, hold ${market.collateralToken.symbol} as collateral (you stay ` +
+                    `1x long ${market.collateralToken.symbol}), and the borrowed ${ev.targetLtvPct}% of its value is farmed ` +
+                    `at ${ev.yieldLegApyPct}% net of the ${ev.stockBorrowApyPct}% stock-leg borrow. leverageApyPct is the ` +
+                    `NET dollar APY on the deposit (${ev.netApyPct}%) — not a user-selectable leverage. Liquidates if ` +
+                    `${market.collateralToken.symbol} falls to ltvPct.liquidation.`,
+                },
+              }
+            : !market.correlated
             ? {
                 profile: {
                   value: "leveraged_perp",
@@ -305,7 +342,8 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
 export function buildStrategies(chainId: number): StrategiesEnvelope {
   const snapshot = composeSnapshot(chainId);
   // Agents see only eligible strategies (no fake-0 / thin / near-maturity / low-liquidity markets).
-  const strategies = snapshot.markets
+  // Equity vaults are appended here so agents discover them alongside the loop markets.
+  const strategies = [...snapshot.markets, ...equityComposed(chainId, snapshot)]
     .filter((cm) => cm.market.visible)
     .map((cm) => toStrategy(cm, snapshot));
   return { asOf: snapshot.asOf, chainId, count: strategies.length, strategies };
@@ -313,7 +351,9 @@ export function buildStrategies(chainId: number): StrategiesEnvelope {
 
 export function buildStrategy(chainId: number, id: string): Strategy | undefined {
   const snapshot = composeSnapshot(chainId);
-  const cm = snapshot.markets.find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase());
+  const cm =
+    snapshot.markets.find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase()) ??
+    equityComposed(chainId, snapshot).find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase());
   // A single strategy is only agent-visible if eligible — hide an ineligible one behind 404.
   return cm && cm.market.visible ? toStrategy(cm, snapshot) : undefined;
 }

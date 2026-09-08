@@ -20,6 +20,7 @@ import flashLeverageJson from "../abi/FlashLeverage.sol/FlashLeverage.json" with
 import flashLeverageRouterJson from "../abi/FlashLeverageRouter.sol/FlashLeverageRouter.json" with { type: "json" };
 import { calcFlashLoanAmount, calcLeverage, calcLeverageApy, calcLtv, oracleReferenceOut } from "../core/leverage.ts";
 import { formatUnits, parseUnits } from "../core/formatUnits.ts";
+import { buildEquityMarkets } from "../core/equity.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
 import { readAddresses, readToken } from "../data/markets.ts";
@@ -181,9 +182,23 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
   // 1. Resolve the market from the live composition. Guardrail: must be leverageable.
   const snap = composeSnapshot(chainId);
   const cm = snap.markets.find((m) => m.market.morphoMarketId === strategyId);
-  if (!cm) throw new Error(`Unknown strategy ${strategyId}`);
+  if (!cm) {
+    // Equity vaults are surfaced in /v1/strategies for discovery, but they're deposited through the
+    // app's vault flow (USDG → stock collateral + yield loop), not this leverage endpoint — so give a
+    // clear signal rather than "unknown" when an agent tries to size one here.
+    const isEquity = buildEquityMarkets(chainId, snap.markets.map((m) => m.market)).some(
+      (m) => m.morphoMarketId.toLowerCase() === strategyId.toLowerCase(),
+    );
+    throw new Error(
+      isEquity
+        ? "Equity vaults are deposited via the Spiral app, not through leverage — open the strategy's links.app to deposit."
+        : `Unknown strategy ${strategyId}`,
+    );
+  }
   const market = cm.market;
-  if (!market.correlated) throw new Error("Market is not correlated — not leverageable");
+  // Both profiles are leverageable through the same swapAndLeverage path — correlated yield loops and
+  // uncorrelated perps alike. Equity vaults are synthetic and never enter this snapshot, so they're
+  // already excluded above ("Unknown strategy"); `visible` is the real eligibility gate.
   if (!market.visible) throw new Error("Market is not currently eligible for leverage");
   assertMarketDataFresh(chainId); // fail-closed: never size a position off stale market data
 
@@ -254,8 +269,12 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
     // bare base APY here made the preview contradict /v1/strategies (and the app) on any market
     // whose yield is incentive-dominated — e.g. 0% base + 4.5% incentive previews as a large
     // NEGATIVE levered APY, because the borrow leg is still netted off.
+    // Pass `true` (not market.correlated) so the perp carry is the honest signed figure — matching
+    // /v1/strategies' leverageApyPct exactly (see strategy.ts honestLeverageApy). For a correlated
+    // loop this is identical; for a perp it's the un-flipped negative carry rather than the app's
+    // sign-flipped "Borrow APY" display value, keeping the two MCP surfaces in parity.
     expectedLeverageApy: calcLeverageApy(
-      market.correlated,
+      true,
       BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy ?? "0").toFixed(2),
       BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2),
       desiredLtv,
