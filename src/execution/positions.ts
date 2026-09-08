@@ -189,7 +189,10 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
       ltvHeadroomPct: BigNumber(market.liqLtv).minus(ltv).toFixed(2),
       currentLeverage: currentLeverage.toFixed(2),
       netValueUsd: equityInLoan.multipliedBy(market.loanToken.valueInUsd).toFixed(2),
-      currentLeverageApyPct: calcLeverageApy(market.correlated, market.collateralToken.apy, netBorrowApy, ltv.toFixed(2)),
+      // Honest signed carry (pass `true`, not market.correlated): a perp reads as its typically-negative
+      // financing carry, matching /v1/strategies' leverageApyPct and the simulate preview rather than the
+      // app's sign-flipped "Borrow APY" display. Identical for a correlated loop.
+      currentLeverageApyPct: calcLeverageApy(true, market.collateralToken.apy, netBorrowApy, ltv.toFixed(2)),
       exitLiquidity: {
         tier: exitLiquidityTier(info),
         cleanExitSize: exitLiquiditySize(info),
