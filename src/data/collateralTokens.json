@@ -23,6 +23,18 @@
     "twitter": "https://x.com/ponsdotfamily",
     "project": "Pons"
   },
+  "0x020bfC650A365f8BB26819deAAbF3E21291018b4": {
+    "name": "Cash Cat",
+    "symbol": "CASHCAT",
+    "underlyingCollateral": "CASHCAT",
+    "yieldSource": "None",
+    "category": "Other",
+    "coingeckoId": null,
+    "description": "CASHCAT is a community meme token on Robinhood Chain, named after 'Cash Cat', an early candidate name for the Robinhood brand before it settled on its current one. It has a fixed 1B supply and no protocol utility or yield; its value is driven by community and trading activity, and it is not affiliated with or endorsed by Robinhood.",
+    "website": "https://cashcattoken.xyz/",
+    "twitter": "https://x.com/cashcat_token",
+    "project": "Cash Cat"
+  },
   "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599": {
     "name": "Wrapped BTC",
     "symbol": "WBTC",

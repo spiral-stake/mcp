@@ -23,6 +23,26 @@
       "morphoMarketId": "0x0309c02dabf0be02682af1a2bde9a457f4df0f0b6bc889cde3f948e5315e4114",
       "oracle": "0xe694c531F65c4BaBc88A52d7178476e095e51574"
     },
+    "0x039503b6308d6d818d181e626d3fbc667d6e68393c3d74332a6124cd2dd6e755": {
+      "collateralToken": {
+        "address": "0x020bfC650A365f8BB26819deAAbF3E21291018b4",
+        "decimals": 18,
+        "name": "Cash Cat",
+        "symbol": "CASHCAT"
+      },
+      "correlated": false,
+      "irm": "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+      "liqLtv": 385000000000000000,
+      "loanToken": {
+        "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+        "decimals": 6,
+        "name": "Global Dollar",
+        "symbol": "USDG"
+      },
+      "maxLtv": 382500000000000000,
+      "morphoMarketId": "0x039503b6308d6d818d181e626d3fbc667d6e68393c3d74332a6124cd2dd6e755",
+      "oracle": "0x1bc8eDC42a2d5ABDC094E56Bec1BebbcF516990A"
+    },
     "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7": {
       "collateralToken": {
         "address": "0x40858070814a57FdF33a613ae84fE0a8b4a874f7",
