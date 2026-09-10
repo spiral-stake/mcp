@@ -48,6 +48,11 @@ export const POLICY = {
   // Equity-vault stock markets (external Morpho markets): borrow APR + liquidity (Morpho GraphQL) +
   // stock price (oracle). Same cadence as morphoMarkets — these rates/liquidity move on the same clock.
   equityMarkets: { refreshEverySec: 2 * M, staleAfterSec: 5 * M } satisfies WarmPolicy,
+
+  // Protocol TVL (net equity / gross collateral / debt across every open position, per chain).
+  // User discovery is incremental (FlashLeverage nonce-derived proxies); the position multicalls
+  // are a few RPC round-trips. Same clock as the prices + collateral values it is valued with.
+  tvl: { refreshEverySec: 5 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
 } as const;
 
 // Hard bound on serving last-good data to the APP. The store keeps last-good indefinitely so a
@@ -77,4 +82,5 @@ export const KEYS = {
   onchainCollateralValue: (chainId: number) => `onchain:collateralValue:${chainId}`,
   exitLiquidity: (chainId: number) => `exitLiquidity:${chainId}`,
   equityMarkets: (chainId: number) => `equity:markets:${chainId}`,
+  tvl: (chainId: number) => `tvl:${chainId}`,
 } as const;

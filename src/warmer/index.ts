@@ -21,6 +21,7 @@ import { fetchMerklIncentiveData } from "../sources/merkl.ts";
 import { fetchTokenPricesResilient } from "../sources/prices.ts";
 import { fetchExitLiquidity, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import { fetchEquityMarketsData } from "../sources/equity.ts";
+import { fetchChainTvl } from "../sources/tvl.ts";
 import { equityVaultsFor } from "../data/equityVaults.ts";
 import {
   fetchStUSDApy,
@@ -252,6 +253,16 @@ export class Warmer {
         run: () => fetchEquityMarketsData(chainId),
       });
     }
+    // Protocol TVL (/v1/tvl). Last in the list so it runs after `prices` and
+    // `onchain-collateral-value` (which it values positions with) have been primed. Not required:
+    // an RPC hiccup on the position reads must not block /ready; the route 503s until the first prime.
+    jobs.push({
+      name: "tvl",
+      key: KEYS.tvl(chainId),
+      policy: POLICY.tvl,
+      required: false,
+      run: () => fetchChainTvl(chainId),
+    });
     return jobs;
   }
 

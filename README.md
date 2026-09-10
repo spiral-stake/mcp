@@ -73,6 +73,7 @@ Every data read the app performs in `v2-client/src/api-services/*` maps to an en
 | `chart.ts` `getMarketChart` (CoinGecko price chart) | `GET /v1/prices/chart?coinId=&days=&currency=` (on-demand proxy) |
 | `chart.ts` `getDexOhlcv` (DEX price chart for tokens with no CoinGecko/TradingView chart, e.g. CASHCAT/PONS on Robinhood) | `GET /v1/prices/ohlcv?chainId=&token=&timeframe=&aggregate=&limit=` (on-demand GeckoTerminal proxy, 30s cache, last-good on failure; `COINGECKO_PRO_API_KEY` lifts the rate limit) |
 | `dashboard.ts` `getApySnapshot` (StableWatch stable APY) | `GET /v1/stable-apy` — fetched directly from StableWatch as a warmed upstream; the mcp **owns** this data now and no longer depends on the dashboard `/apy` endpoint |
+| — (protocol-level, not an app read) | `GET /v1/tvl` — protocol TVL across all supported chains, warmed every 5m from on-chain positions: `tvlUsd` = net user equity (collateral − debt, the DefiLlama TVL), `grossTvlUsd` = total looped collateral, `borrowedUsd` = total debt, plus `positions`/`users`; 503 until the first chain is computed |
 | swap/meta-dex aggregators, referral, positions | **out of scope** (execution / backend domains) |
 
 Cross-cutting: `/v1` versioning, CORS limited to `CORS_ORIGINS`, a consistent error envelope

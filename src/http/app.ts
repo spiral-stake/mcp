@@ -21,6 +21,7 @@ import { buildAppMarkets } from "./appMarkets.ts";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { buildMcpServer } from "../mcp/server.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
+import { aggregateTvl, type ChainTvl, type ChainTvlEntry } from "../core/tvl.ts";
 import { openApiSpec } from "./openapi.ts";
 import { rateLimit } from "./rateLimit.ts";
 import { attachPartner } from "./partnerAuth.ts";
@@ -213,6 +214,21 @@ app.get("/v1/stable-apy", (c) => {
   const stableApy = view?.value?.stableApy ?? [];
   if (stableApy.length === 0) throw new ApiError("not_ready", "APY data not yet available");
   return c.json({ asOf: view?.asOf ?? null, stale: view?.stale ?? true, stableApy });
+});
+
+// ── v1: protocol TVL across every supported chain (warmed by the `tvl` job; reads the store only) ──
+// tvlUsd = net user equity (collateral − debt, the DefiLlama TVL), grossTvlUsd = total looped
+// collateral, borrowedUsd = total debt. 503 (never 200-with-zeros) until at least one chain has
+// been computed; chains not yet primed are simply omitted from `chains`/`total`.
+app.get("/v1/tvl", (c) => {
+  const chains: ChainTvlEntry[] = [];
+  for (const chainId of SUPPORTED_CHAIN_IDS) {
+    const view = rawStore.view<ChainTvl>(KEYS.tvl(chainId));
+    if (!view) continue;
+    chains.push({ ...view.value, chainId, asOf: view.asOf, stale: view.stale });
+  }
+  if (chains.length === 0) throw new ApiError("not_ready", "TVL not yet computed");
+  return c.json(aggregateTvl(chains));
 });
 
 // ── v1: app-surface — full composed Market[] (raw, tagged BigNumber/bigint) ──

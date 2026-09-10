@@ -197,6 +197,40 @@ export function openApiSpec() {
       chainId: { type: "integer", enum: [1, 4663] },
     },
   };
+  const tvlTotals = {
+    type: "object",
+    properties: {
+      tvlUsd: { type: "number", description: "Net user equity in USD (collateral − debt); the DefiLlama TVL. 2 decimals." },
+      grossTvlUsd: { type: "number", description: "Total looped collateral in USD. 2 decimals." },
+      borrowedUsd: { type: "number", description: "Total debt owed to Morpho in USD. 2 decimals." },
+      positions: { type: "integer", description: "Open positions with non-zero collateral." },
+      users: { type: "integer", description: "Distinct users with at least one such position." },
+    },
+    required: ["tvlUsd", "grossTvlUsd", "borrowedUsd", "positions", "users"],
+  };
+  const tvlResponse = {
+    type: "object",
+    properties: {
+      asOf: { type: "string", format: "date-time", description: "Oldest chain snapshot." },
+      stale: { type: "boolean", description: "True if any chain's snapshot is past its freshness budget." },
+      total: tvlTotals,
+      chains: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            chainId: { type: "integer" },
+            asOf: { type: "string", format: "date-time" },
+            stale: { type: "boolean" },
+            ...tvlTotals.properties,
+          },
+          required: ["chainId", "asOf", "stale", ...tvlTotals.required],
+        },
+      },
+    },
+    required: ["asOf", "stale", "total", "chains"],
+  };
+
   const bearer = [{ bearerAuth: [] }];
   const partnerErr = {
     "400": { description: "Invalid input", content: { "application/json": { schema: errorEnvelope } } },
@@ -277,6 +311,21 @@ export function openApiSpec() {
           description:
             "The `{ stableApy: [...] }` snapshot the app previously fetched from the dashboard `/apy`. The mcp now owns this data. Not readiness-gated: serves last-good (or an empty list) with a visible stale flag.",
           responses: { "200": { description: "OK" } },
+        },
+      },
+      "/v1/tvl": {
+        get: {
+          tags: ["Public"],
+          summary: "Protocol TVL across all supported chains",
+          description:
+            "Aggregated over every open Spiral position (each held by a UserProxy on a Morpho Blue market). `tvlUsd` = net user equity (collateral − debt) — the figure DefiLlama lists as TVL; `grossTvlUsd` = total looped collateral; `borrowedUsd` = total debt owed to Morpho. `tvlUsd + borrowedUsd = grossTvlUsd`. `positions` counts open positions with non-zero collateral and `users` the distinct wallets holding one. Top-level `asOf` is the oldest chain snapshot and `stale` is true if any chain is stale. Chains not yet computed are omitted; 503 until at least one is.",
+          responses: {
+            "200": {
+              description: "TVL envelope",
+              content: { "application/json": { schema: tvlResponse } },
+            },
+            "503": { description: "Not ready (no chain computed yet)", content: { "application/json": { schema: errorEnvelope } } },
+          },
         },
       },
       "/v1/app/markets": {
