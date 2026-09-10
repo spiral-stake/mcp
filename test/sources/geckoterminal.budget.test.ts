@@ -9,7 +9,7 @@ vi.mock("../../src/sources/http.ts", async (importOriginal) => {
   return { ...actual, getJson };
 });
 
-import { fetchPoolOhlcv, _resetGeckoBudget } from "../../src/sources/geckoterminal.ts";
+import { fetchPoolOhlcv, sanitizeCandles, _resetGeckoBudget } from "../../src/sources/geckoterminal.ts";
 import { UpstreamError } from "../../src/sources/http.ts";
 
 const POOL = { address: "0xd42a491087a15e5afd51feb3606066cc152d2b09", name: "x", dex: "x", reserveUsd: 1, tokenSide: "base" as const };
@@ -59,5 +59,33 @@ describe("geckoterminal budget", () => {
     await vi.advanceTimersByTimeAsync(2_000);
     await result;
     expect(getJson).toHaveBeenCalledTimes(4);
+  });
+});
+
+describe("sanitizeCandles (artifact guard)", () => {
+  const c = (t: number, close: number, v: number) => ({ t, o: close, h: close, l: close, c: close, v });
+  const RESERVE = 8_500_000; // the SPY/USDG pool
+
+  it("flattens a >10% move on dust volume and the zero-volume candle that carries it", () => {
+    // The real SPY case: steady ~$761, then $900 on $180 of volume, then $900 on 0, then back.
+    const series = [c(1, 761, 3000), c(2, 762, 2500), c(3, 761, 4000), c(4, 900, 180), c(5, 900, 0), c(6, 767, 2000)];
+    const out = sanitizeCandles(series, RESERVE);
+    expect(out.map((x) => x.c)).toEqual([761, 762, 761, 761, 761, 767]);
+    expect(out[3]!.v).toBe(180); // volume is kept, only price is flattened
+  });
+
+  it("keeps a real large move that comes with volume proportional to the pool", () => {
+    const series = [c(1, 0.1, 50_000), c(2, 0.1, 60_000), c(3, 0.14, 400_000), c(4, 0.13, 300_000)];
+    expect(sanitizeCandles(series, 5_000_000).map((x) => x.c)).toEqual([0.1, 0.1, 0.14, 0.13]);
+  });
+
+  it("keeps a small move on dust volume (quiet market, not an artifact)", () => {
+    const series = [c(1, 100, 5000), c(2, 101, 10), c(3, 100.5, 0), c(4, 100, 4000)];
+    expect(sanitizeCandles(series, RESERVE).map((x) => x.c)).toEqual([100, 101, 100.5, 100]);
+  });
+
+  it("does nothing when the pool depth is unknown", () => {
+    const series = [c(1, 761, 3000), c(2, 900, 0)];
+    expect(sanitizeCandles(series, 0).map((x) => x.c)).toEqual([761, 900]);
   });
 });

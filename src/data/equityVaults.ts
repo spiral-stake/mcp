@@ -19,6 +19,8 @@ export interface EquityVaultConfig {
     decimals: number;
     /** Chainlink stock/USD oracle for the stock market (used for the live stock price). */
     oracle: string;
+    /** Exchange-listed symbol for the TradingView chart of the real share (the on-chain chart only goes back to the token's launch). */
+    tradingViewSymbol: string;
   };
   /** The stock market's Morpho IRM address (part of its MarketParams tuple). */
   irm: string;
@@ -44,6 +46,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
       symbol: "SPY",
+      tradingViewSymbol: "AMEX:SPY",
       name: "SPY",
       decimals: 18,
       oracle: "0xe8dAb19184f72b5a5a9d51A6C50A1b04b0669ce7",
@@ -64,6 +67,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC",
       symbol: "NVDA",
+      tradingViewSymbol: "NASDAQ:NVDA",
       name: "NVDA",
       decimals: 18,
       oracle: "0xC5b8A6C5fDF14f9744dB1C8595f49E42Ce23031a",
@@ -84,6 +88,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0x322F0929c4625eD5bAd873c95208D54E1c003b2d",
       symbol: "TSLA",
+      tradingViewSymbol: "NASDAQ:TSLA",
       name: "TSLA",
       decimals: 18,
       oracle: "0xCa76875634e0b9759AA6610dC3092e92fcefE46E",

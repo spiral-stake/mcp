@@ -173,6 +173,28 @@ interface GtOhlcvResponse {
   data?: { attributes?: { ohlcv_list?: unknown[] } };
 }
 
+// Artifact guard. GeckoTerminal occasionally prints a candle that moves the price by tens of percent
+// on negligible volume (seen: tokenized SPY, $761 → $900 on $180 of volume in an $8.5M pool, then a
+// zero-volume candle carrying $900 forward). No real trade of that size moves a pool like that, so
+// such a candle is flattened to the previous close (volume kept). "Dust" is judged against the pool's
+// depth: moving a constant-product pool 10% takes roughly 5% of its reserve in volume, so a 10% candle
+// on under 1% of reserve did not come from a trade in this pool. Real moves carry real volume and
+// pass untouched — a meme token's genuine 30% candle on a $5M pool comes with six figures, not $180.
+const SPIKE_MOVE = 0.1; // |close / prev close − 1| above this …
+const SPIKE_RESERVE_FRACTION = 0.01; // … on volume under this share of the pool's USD reserve
+export function sanitizeCandles(candles: Candle[], reserveUsd: number): Candle[] {
+  if (candles.length < 2 || !(reserveUsd > 0)) return candles;
+  const dustBelow = reserveUsd * SPIKE_RESERVE_FRACTION;
+  const out: Candle[] = [candles[0]!];
+  for (let i = 1; i < candles.length; i++) {
+    const c = candles[i]!;
+    const prev = out[i - 1]!;
+    const move = Math.abs(c.c / prev.c - 1);
+    out.push(move > SPIKE_MOVE && c.v < dustBelow ? { t: c.t, o: prev.c, h: prev.c, l: prev.c, c: prev.c, v: c.v } : c);
+  }
+  return out;
+}
+
 // USD candles for one pool side, oldest → newest. GeckoTerminal returns newest first and can
 // include malformed rows on the live (still-open) candle — those are dropped rather than plotted.
 export async function fetchPoolOhlcv(
@@ -196,5 +218,5 @@ export async function fetchPoolOhlcv(
     candles.push({ t, o, h, l, c, v });
   }
   candles.sort((a, b) => a.t - b.t);
-  return candles;
+  return sanitizeCandles(candles, pool.reserveUsd);
 }

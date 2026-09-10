@@ -58,6 +58,7 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
         ...yieldMarket.collateralToken.info,
         category: TokenCategory.Stocks,
         project: v.stock.name,
+        tradingViewSymbol: v.stock.tradingViewSymbol,
       },
     };
 
