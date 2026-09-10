@@ -60,8 +60,8 @@ const schema = z.object({
   SENTRY_DSN: z.string().optional(),
   SENTRY_ENVIRONMENT: z.string().default("production"),
 
-  // Execution (C): fee receiver for the 10 bps swap fee (mirrors the app's VITE_FEE_RECEIVER).
-  // Absent → no fee charged (chargeFee falls through), matching the app when unset.
+  // Execution (C): fee receiver for the swap fee — 5 bps correlated / 25 bps non-correlated, see
+  // execution/swap.ts (mirrors the app's VITE_FEE_RECEIVER). Absent → no fee charged, as the app.
   FEE_RECEIVER: z.string().optional(),
 
   // OpenOcean aggregator (mainnet only) — raced against KyberSwap for best execution. The Pro

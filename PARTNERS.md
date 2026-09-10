@@ -76,7 +76,7 @@ Quote the `correlationId` to support for any issue.
 ## Notes
 - **Non-custodial:** you never send us a private key; we never send funds. The `tx` must be signed
   by the `userAddress` it was built for.
-- **Fees:** a 10 bps swap fee is embedded; partner revenue share is reconciled separately per your
-  agreement.
+- **Fees:** a swap fee is embedded on the input token — 5 bps on correlated markets, 25 bps on
+  non-correlated markets; partner revenue share is reconciled separately per your agreement.
 - **Rate limits:** per-partner, returned as `RateLimit-*` headers.
 - **Slippage:** default 0.5%, capped at 1%; override with `slippage` (ratio, e.g. `0.003`).

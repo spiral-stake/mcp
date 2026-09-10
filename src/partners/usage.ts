@@ -16,7 +16,7 @@ export interface UsageEvent {
   userAddress?: string;
   strategyId?: string;
   positionId?: string;
-  amountFlashLoan?: string; // loan-token units — the 10 bps fee base
+  amountFlashLoan?: string; // loan-token units — the swap fee base (5 / 25 bps by market type)
   loanSymbol?: string;
   notionalUsd?: number; // best-effort leveraged position size, for quick rollups
 }

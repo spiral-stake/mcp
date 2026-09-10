@@ -1,6 +1,7 @@
-// Locks the fund-critical swap routing: the Pendle 5 bps currency_in fee, the KyberSwap fee params,
-// per-chain routing (ethereum / robinhood), native-token mapping, and the chargeFee toggle. A
-// regression here silently loses protocol fees or routes to the wrong chain, so it is CI-guarded.
+// Locks the fund-critical swap routing: the Pendle currency_in fee, the KyberSwap fee params, the
+// per-market rate (5 bps correlated / 25 bps non-correlated, mirroring the app), per-chain routing
+// (ethereum / robinhood), native-token mapping, and the feeBps=0 toggle. A regression here silently
+// loses protocol fees or routes to the wrong chain, so it is CI-guarded.
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
 // NOTE: vi.mock factories are hoisted above module scope — the fee literal must be inlined here.
@@ -10,7 +11,13 @@ vi.mock("../../src/sources/http.ts", () => ({ getJson: vi.fn(), postJson: vi.fn(
 const FEE = "0x9ced716f16651b69D5167C82003690621e8F90b9";
 
 import { getJson, postJson } from "../../src/sources/http.ts";
-import { getSwapData } from "../../src/execution/swap.ts";
+import {
+  getSwapData,
+  swapFeeBps,
+  openoceanReferrerFeePct,
+  SWAP_FEE_BPS,
+  NON_CORRELATED_SWAP_FEE_BPS,
+} from "../../src/execution/swap.ts";
 
 const KYBER_ROUTES = {
   data: { routeSummary: { amountInUsd: "1000", amountOutUsd: "999" }, tokenIn: "x" },
@@ -46,10 +53,30 @@ describe("getSwapData — Pendle (PT collateral)", () => {
     expect(vi.mocked(postJson).mock.calls[0][0]).toBe("https://api-v2.pendle.finance/core/v3/sdk/4663/convert");
   });
 
-  it("omits the fee when chargeFee=false", async () => {
+  it("charges the rate it is given (25 bps non-correlated)", async () => {
     vi.mocked(postJson).mockResolvedValue(PENDLE);
-    await getSwapData(1, true, "0xRecv", "0xIn", "0xPT", 1000n, 0.005, false);
+    await getSwapData(1, true, "0xRecv", "0xIn", "0xPT", 1000n, 0.005, NON_CORRELATED_SWAP_FEE_BPS);
+    expect((vi.mocked(postJson).mock.calls[0][1] as any).kyberSwapParams.routes.feeAmount).toBe("25");
+  });
+
+  it("omits the fee when feeBps=0", async () => {
+    vi.mocked(postJson).mockResolvedValue(PENDLE);
+    await getSwapData(1, true, "0xRecv", "0xIn", "0xPT", 1000n, 0.005, 0);
     expect((vi.mocked(postJson).mock.calls[0][1] as any).kyberSwapParams).toBeUndefined();
+  });
+});
+
+describe("fee rate — parity with the app", () => {
+  it("is 5 bps on correlated markets and 25 bps on non-correlated (perp) markets", () => {
+    expect(SWAP_FEE_BPS).toBe(5);
+    expect(NON_CORRELATED_SWAP_FEE_BPS).toBe(25);
+    expect(swapFeeBps({ correlated: true })).toBe(5);
+    expect(swapFeeBps({ correlated: false })).toBe(25);
+  });
+
+  it("grosses the OpenOcean referrer fee up for its 20% cut", () => {
+    expect(openoceanReferrerFeePct(5)).toBe("0.0625");
+    expect(openoceanReferrerFeePct(25)).toBe("0.3125");
   });
 });
 
@@ -87,9 +114,15 @@ describe("getSwapData — KyberSwap (non-PT)", () => {
     expect(vi.mocked(getJson).mock.calls[0][0]).toContain(`tokenIn=0x${"e".repeat(40)}`);
   });
 
-  it("omits the fee params when chargeFee=false", async () => {
+  it("charges the rate it is given (25 bps non-correlated)", async () => {
     vi.mocked(postJson).mockResolvedValue(KYBER_BUILT);
-    await getSwapData(1, false, "0xRecv", "0xIn", "0xOut", 1000n, 0.005, false);
+    await getSwapData(1, false, "0xRecv", "0xIn", "0xOut", 1000n, 0.005, NON_CORRELATED_SWAP_FEE_BPS);
+    expect(vi.mocked(getJson).mock.calls[0][0]).toContain("feeAmount=25");
+  });
+
+  it("omits the fee params when feeBps=0", async () => {
+    vi.mocked(postJson).mockResolvedValue(KYBER_BUILT);
+    await getSwapData(1, false, "0xRecv", "0xIn", "0xOut", 1000n, 0.005, 0);
     expect(vi.mocked(getJson).mock.calls[0][0]).not.toContain("feeReceiver");
   });
 

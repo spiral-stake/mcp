@@ -25,7 +25,7 @@ import { composeSnapshot } from "../core/compose.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
 import { readAddresses, readToken } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
-import { getSwapData, type SwapData, type SwapResult, type SwapSource } from "./swap.ts";
+import { getSwapData, swapFeeBps, type SwapData, type SwapResult, type SwapSource } from "./swap.ts";
 import { buildApproveCalls, type Call } from "./approve.ts";
 import { buildReallocateParams } from "./reallocate.ts";
 import { openSigningUrl } from "./appLink.ts";
@@ -222,14 +222,14 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
     amountFlashLoan = calcFlashLoanAmount(desiredLtv, market, input.amount);
   } else {
     const amountIn = parseUnits(input.amount, payToken.decimals);
-    const ext = await getSwapData(chainId, isPt, routerAddress, payToken.address, market.collateralToken.address, amountIn, slippage, true, oracleReferenceOut(market, payToken.address, amountIn, market.collateralToken.address));
+    const ext = await getSwapData(chainId, isPt, routerAddress, payToken.address, market.collateralToken.address, amountIn, slippage, swapFeeBps(market), oracleReferenceOut(market, payToken.address, amountIn, market.collateralToken.address));
     externalSwapData = ext.swapData;
     externalMinTokenOut = BigInt(BigNumber(ext.amountOut.toString()).multipliedBy(slippageFactor).toFixed(0));
     amountSwappedCollateral = formatUnits(ext.amountOut, market.collateralToken.decimals).toString();
     amountFlashLoan = calcFlashLoanAmount(desiredLtv, market, amountSwappedCollateral);
   }
 
-  const leverageSwap = await getSwapData(chainId, isPt, flashLeverageAddress, market.loanToken.address, market.collateralToken.address, amountFlashLoan, slippage, true, oracleReferenceOut(market, market.loanToken.address, amountFlashLoan, market.collateralToken.address));
+  const leverageSwap = await getSwapData(chainId, isPt, flashLeverageAddress, market.loanToken.address, market.collateralToken.address, amountFlashLoan, slippage, swapFeeBps(market), oracleReferenceOut(market, market.loanToken.address, amountFlashLoan, market.collateralToken.address));
   const minTokenOut = BigInt(BigNumber(leverageSwap.amountOut.toString()).multipliedBy(slippageFactor).toFixed(0));
 
   // 3. leverageParams — identical shape to the app / the FlashLeverage ABI tuple.

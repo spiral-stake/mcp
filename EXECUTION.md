@@ -45,8 +45,9 @@ Given `(strategyId, tokenIn, amountIn, leverage|desiredLtv, userAddress, slippag
 4. Leverage swap (`borrow → collateral`)
    `getSwapData(chainId, isPt, receiver=(direct?flashLeverage:router), loanToken, collateral, amountFlashLoan, slippage)`
    → `swapData`, `amountOut`, `priceImpact`; `minTokenOut = amountOut×(1−slippage)` (BigInt, ROUND_DOWN).
-   - **PT collateral:** `getSwapData` routes via the **Pendle SDK** and charges the **10 bps fee** on
-     `currency_in` — this must be ported exactly (see the Pendle fee-collection path).
+   - **PT collateral:** `getSwapData` routes via the **Pendle SDK** and charges the market's fee
+     (**5 bps** correlated / **25 bps** non-correlated) on `currency_in` — this must be ported exactly
+     (see the Pendle fee-collection path).
    - **Prices missing** (`tokenIn`/collateral `valueInUsd == 0`) → **refuse** (the app toasts + reloads).
 5. `leverageParams = { marketId, amountCollateral: (direct ? parseUnits(amountIn, collateral.dec)
    : externalSwapData.minTokenOut), amountFlashLoan, swapData, minTokenOut }`.
@@ -108,7 +109,7 @@ Slippage bounded (default 0.5%, hard cap = contract `MAX_SLIPPAGE` 1%).
 Port the **pure** builders; do **not** port `Base.write`/`writes`/wagmi. Reads that used
 `getAccount(wagmiConfig)` become viem reads with the passed `userAddress`.
 - `calcFlashLoanAmount` (already via `leverage.ts`), path selection, `minTokenOut`, ETH/fee value math.
-- **`getSwapData`** — KyberSwap (non-PT) + **Pendle SDK w/ 10 bps fee** (PT). Biggest piece; fund-relevant.
+- **`getSwapData`** — KyberSwap (non-PT) + **Pendle SDK** (PT), w/ the per-market fee (5 / 25 bps). Biggest piece; fund-relevant.
 - **`buildReallocateParams`** (`utils/publicAllocator.ts`) — public-allocator withdrawals + `totalFee`.
 - **`ERC20.approveCalls`** — viem `allowance` + USDT reset-to-0 special-case.
 - **ABIs + addresses:** `FlashLeverage` + `FlashLeverageRouter`, via extended `sync:data`.

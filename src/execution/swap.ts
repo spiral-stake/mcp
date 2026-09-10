@@ -1,6 +1,6 @@
 // Swap calldata — ported from v2-client api-services/{swapAggregator,metaDexAggregator}.ts
-// (mainnet path only). PT collateral routes via the Pendle SDK /v3/sdk/convert with the 10 bps
-// currency_in fee; everything else via KyberSwap (routes -> route/build). Fund-relevant: the fee
+// (mainnet path only). PT collateral routes via the Pendle SDK /v3/sdk/convert with the currency_in
+// referral fee; everything else via KyberSwap (routes -> route/build). Fund-relevant: the fee
 // routing and slippage encoding MUST match the app exactly.
 //
 // Returns { swapData: { extRouter, extCalldata }, amountOut, source } — the extCalldata is what the
@@ -27,6 +27,27 @@ const OPENOCEAN_ROUTER = "0x6352a56caadC4F1E25CD6c75970Fa768A3304e64";
 const NATIVE_ADDRESS = "0x0000000000000000000000000000000000000000";
 const NATIVE_KYBER = "0x" + "e".repeat(40); // KyberSwap/OpenOcean native-token placeholder (0xeee…eee)
 
+// Referral fee taken by the aggregator on the swap input (chargeFeeBy: "currency_in"), in bps.
+// Mirrors the app's SWAP_FEE_BPS / NON_CORRELATED_SWAP_FEE_BPS exactly — the rate charged here must
+// be the rate the app discloses. KyberSwap forwards the whole amount to FEE_RECEIVER.
+export const SWAP_FEE_BPS = 5;
+// Non-correlated swaps: a perp market (every fee-bearing swap on it). The user is buying price
+// exposure rather than looping a yield asset, so the referral fee is higher. Correlated (yield)
+// loops stay at SWAP_FEE_BPS. (The equity vault's stock leg also carries this rate, but equity
+// entries are app-only — they never reach buildLeverage.)
+export const NON_CORRELATED_SWAP_FEE_BPS = 25;
+// The referral fee a market's swaps carry — the app's swapFeeBps(market).
+export function swapFeeBps(market: { correlated: boolean }): number {
+  return market.correlated ? SWAP_FEE_BPS : NON_CORRELATED_SWAP_FEE_BPS;
+}
+// OpenOcean keeps 20% of the referrer fee, so feeBps / 0.8 is needed to net what KyberSwap forwards
+// in full: 0.0625% for 5 bps, 0.3125% for 25 bps. Percent (its API's unit). OpenOcean truncates to
+// 0.01% granularity (0.0625 → 0.06%, nets ~4.8 bps; 0.3125 → 0.31%, ~24.8 bps); the next step up
+// would charge more than the disclosed rate, so the under-collection is deliberate — as the app.
+export function openoceanReferrerFeePct(feeBps: number): string {
+  return String(feeBps / 0.8 / 100);
+}
+
 export interface SwapData {
   extRouter: string;
   extCalldata: string;
@@ -41,7 +62,8 @@ export interface SwapResult {
 }
 
 // isPt = collateral is a Pendle PT (route via Pendle SDK). receiver = the contract that executes the
-// calldata (FlashLeverage or the Router). chargeFee toggles the 10 bps fee (default on, as the app).
+// calldata (FlashLeverage or the Router). feeBps = referral fee on the input token, 0 = no fee;
+// callers pass swapFeeBps(market) so the rate charged is the rate the market discloses (as the app).
 // chainId selects the aggregator chain (1 = mainnet, 4663 = Robinhood; 31337 hardhat fork → 1).
 export async function getSwapData(
   chainId: number,
@@ -51,7 +73,7 @@ export async function getSwapData(
   tokenOut: string,
   amountIn: bigint | string,
   slippage: number,
-  chargeFee = true,
+  feeBps: number = SWAP_FEE_BPS,
   // Expected tokenOut (raw), from the caller's trusted reference (the collateral<->loan oracle rate).
   // Used ONLY to sanity-check an OpenOcean-only quote (KyberSwap down) — see MAX_OO_ONLY_DEVIATION_BPS.
   referenceOut?: bigint,
@@ -67,9 +89,9 @@ export async function getSwapData(
       inputs: [{ token: tokenIn, amount: String(amountIn) }],
       outputs: [tokenOut],
     };
-    if (chargeFee && feeReceiver) {
+    if (feeBps > 0 && feeReceiver) {
       body.kyberSwapParams = {
-        routes: { chargeFeeBy: "currency_in", feeAmount: "5", feeReceiver, isInBps: true },
+        routes: { chargeFeeBy: "currency_in", feeAmount: String(feeBps), feeReceiver, isInBps: true },
       };
     }
     const res = await postJson<{ routes?: PendleRoute[] }>(
@@ -92,16 +114,16 @@ export async function getSwapData(
   if (chainId === 1 || chainId === 31337) chainId = 1;
   else if (chainId !== ROBINHOOD_CHAIN_ID) throw new Error(`No swap aggregator configured for chainId ${chainId}`);
 
-  const fee = chargeFee ? feeReceiver : undefined;
+  const fee = feeBps > 0 ? feeReceiver : undefined;
 
   // Mainnet: race KyberSwap + OpenOcean and take the better amountOut for the user. Gated on the
   // OpenOcean key being configured (its router must be whitelisted on-chain first) AND the
   // OPENOCEAN_ENABLED kill switch; either off → KyberSwap only. Robinhood stays KyberSwap-only
   // (OpenOcean doesn't support it).
   if (chainId === 1 && env.OPENOCEAN_API_KEY && env.OPENOCEAN_ENABLED) {
-    return pickBestSwap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, fee, referenceOut);
+    return pickBestSwap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, feeBps, fee, referenceOut);
   }
-  return callKyberswap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, fee);
+  return callKyberswap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, fee, feeBps);
 }
 
 // KyberSwap is the baseline aggregator; OpenOcean is the challenger, taken only when it wins by a
@@ -128,12 +150,13 @@ async function pickBestSwap(
   tokenOut: string,
   amountIn: bigint | string,
   slippage: number,
+  feeBps: number,
   feeReceiver?: string,
   referenceOut?: bigint,
 ): Promise<SwapResult> {
   const [kyber, oo] = await Promise.allSettled([
-    callKyberswap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, feeReceiver),
-    callOpenOcean(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, feeReceiver),
+    callKyberswap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, feeReceiver, feeBps),
+    callOpenOcean(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, feeReceiver, feeBps),
   ]);
 
   // A losing venue is indistinguishable from a broken one — an expired key, a 401 or a timeout just
@@ -187,6 +210,7 @@ async function callOpenOcean(
   amountIn: bigint | string,
   slippage: number,
   feeReceiver?: string,
+  feeBps: number = SWAP_FEE_BPS,
 ): Promise<SwapResult> {
   const chainCode = OPENOCEAN_CHAIN_CODE[chainId];
   if (!chainCode) throw new Error(`OpenOcean unsupported for chainId ${chainId}`);
@@ -206,9 +230,9 @@ async function callOpenOcean(
   });
   if (feeReceiver) {
     q.set("referrer", feeReceiver);
-    // 0.0625% = 6.25 bps on the input token. OpenOcean keeps 20% of the referral fee, so 6.25 bps
-    // nets the protocol exactly 5 bps (6.25 × 0.80) — the same take as the 5 bps KyberSwap charges.
-    q.set("referrerFee", "0.0625");
+    // Percent on the input token, grossed up for OpenOcean's 20% cut so the protocol nets feeBps —
+    // the same take KyberSwap forwards in full (see openoceanReferrerFeePct).
+    q.set("referrerFee", openoceanReferrerFeePct(feeBps));
   }
 
   const res = await getJson<{ data?: OpenOceanSwap }>(`${OPENOCEAN_URL}/v4/${chainCode}/swap?${q}`, {
@@ -240,6 +264,7 @@ async function callKyberswap(
   amountIn: bigint | string,
   slippage: number,
   feeReceiver?: string,
+  feeBps: number = SWAP_FEE_BPS,
 ): Promise<SwapResult> {
   const chainName = KYBER_CHAIN_NAME[chainId];
   if (tokenIn === NATIVE_ADDRESS) tokenIn = NATIVE_KYBER;
@@ -249,7 +274,7 @@ async function callKyberswap(
     q.set("isInBps", "true");
     q.set("chargeFeeBy", "currency_in");
     q.set("feeReceiver", feeReceiver);
-    q.set("feeAmount", "5"); // 5 bps = 0.05% (KyberSwap takes no cut → protocol nets 5 bps)
+    q.set("feeAmount", String(feeBps)); // bps on currency_in (KyberSwap takes no cut → protocol nets feeBps)
   }
   const routes = await getJson<KyberRoutes>(`${KYBERSWAP_URL}/${chainName}/api/v1/routes?${q}`, {
     source: "kyberswap-routes",
