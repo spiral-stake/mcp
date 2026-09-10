@@ -352,9 +352,9 @@ app.get("/v1/prices/ohlcv", async (c) => {
 
   try {
     const body = await getDexOhlcv({ chainId, token, timeframe, aggregate, limit });
-    // Short edge/browser cache: the server cache is 30s, so a 15s hint halves the upstream cost of
-    // a page reload without ever serving a candle older than the app's own poll interval.
-    c.header("Cache-Control", "public, max-age=15");
+    // Short edge/browser cache under the server TTL for the timeframe (30s / 2m / 10m), so a page
+    // reload never serves a candle older than the app's own poll interval.
+    c.header("Cache-Control", `public, max-age=${timeframe === "minute" ? 15 : timeframe === "hour" ? 60 : 300}`);
     return c.json(body);
   } catch (e) {
     if (e instanceof NoPoolError) throw new ApiError("not_found", e.message);

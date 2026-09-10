@@ -37,7 +37,7 @@ describe("core/dexOhlcv", () => {
     expect(fetchPoolOhlcv).toHaveBeenCalledTimes(1);
     expect(fetchTopPool).toHaveBeenCalledTimes(1);
 
-    vi.advanceTimersByTime(CANDLES_TTL_MS + 1);
+    vi.advanceTimersByTime(CANDLES_TTL_MS.hour + 1);
     await getDexOhlcv(req);
     expect(fetchPoolOhlcv).toHaveBeenCalledTimes(2);
     // Pool resolution is cached for an hour — the refetch must not re-resolve it.
@@ -67,13 +67,13 @@ describe("core/dexOhlcv", () => {
     vi.useFakeTimers();
     await getDexOhlcv(req);
 
-    vi.advanceTimersByTime(CANDLES_TTL_MS + 1);
+    vi.advanceTimersByTime(CANDLES_TTL_MS.hour + 1);
     fetchPoolOhlcv.mockRejectedValueOnce(new Error("HTTP 429 from geckoterminal"));
     const stale = await getDexOhlcv(req);
     expect(stale.stale).toBe(true);
     expect(stale.candles).toEqual(CANDLES);
 
-    vi.advanceTimersByTime(CANDLES_STALE_GRACE_MS + 1);
+    vi.advanceTimersByTime(CANDLES_STALE_GRACE_MS.hour + 1);
     fetchPoolOhlcv.mockRejectedValueOnce(new Error("HTTP 429 from geckoterminal"));
     await expect(getDexOhlcv(req)).rejects.toThrow(/429/);
   });
@@ -89,11 +89,29 @@ describe("core/dexOhlcv", () => {
   it("never masks a missing pool with stale candles", async () => {
     vi.useFakeTimers();
     await getDexOhlcv(req);
-    vi.advanceTimersByTime(CANDLES_TTL_MS + 1);
+    vi.advanceTimersByTime(CANDLES_TTL_MS.hour + 1);
     // Pool cache expires after 1h; simulate the pool disappearing on re-resolution.
     vi.advanceTimersByTime(60 * 60_000);
     fetchTopPool.mockResolvedValue(null);
     await expect(getDexOhlcv(req)).rejects.toBeInstanceOf(NoPoolError);
+  });
+
+  it("caches daily candles far longer than minute candles (budget: a day bar doesn't move in 30s)", async () => {
+    vi.useFakeTimers();
+    const dayReq = { ...req, timeframe: "day" as const };
+    const minReq = { ...req, timeframe: "minute" as const, aggregate: 5 };
+    await getDexOhlcv(dayReq);
+    await getDexOhlcv(minReq);
+    expect(fetchPoolOhlcv).toHaveBeenCalledTimes(2);
+
+    vi.advanceTimersByTime(CANDLES_TTL_MS.minute + 1);
+    await getDexOhlcv(dayReq);
+    await getDexOhlcv(minReq);
+    expect(fetchPoolOhlcv).toHaveBeenCalledTimes(3); // only the minute key refetched
+
+    vi.advanceTimersByTime(CANDLES_TTL_MS.day + 1);
+    await getDexOhlcv(dayReq);
+    expect(fetchPoolOhlcv).toHaveBeenCalledTimes(4);
   });
 
   it("rejects a chain with no GeckoTerminal network", async () => {

@@ -46,6 +46,59 @@ export interface Candle {
   v: number;
 }
 
+// ── Upstream budget ──────────────────────────────────────────────────────────
+// The public API allows ~30 req/min per IP and answers the 31st with a 429 — which, for a range
+// nobody has loaded yet, would surface as a blank chart. So every upstream call takes a slot from a
+// sliding one-minute window (kept a little under the real cap); when the window is full callers wait
+// for the oldest slot to age out, bounded so a flood fails fast rather than piling up. Fires straight
+// through with the paid key's much larger budget.
+const PUBLIC_BUDGET_PER_MIN = 25;
+const PRO_BUDGET_PER_MIN = 250;
+const WINDOW_MS = 60_000;
+const MAX_WAIT_MS = 8_000;
+const RETRY_429_DELAY_MS = 1_500;
+let callTimes: number[] = [];
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function acquireSlot(): Promise<void> {
+  const budget = env.COINGECKO_PRO_API_KEY ? PRO_BUDGET_PER_MIN : PUBLIC_BUDGET_PER_MIN;
+  const deadline = Date.now() + MAX_WAIT_MS;
+  for (;;) {
+    const now = Date.now();
+    callTimes = callTimes.filter((t) => now - t < WINDOW_MS);
+    if (callTimes.length < budget) {
+      callTimes.push(now);
+      return;
+    }
+    const waitMs = callTimes[0]! + WINDOW_MS - now + 5;
+    if (now + waitMs > deadline) {
+      throw new UpstreamError("GeckoTerminal request budget exhausted", "geckoterminal", 429);
+    }
+    await sleep(waitMs);
+  }
+}
+
+// One budgeted GET. A 429 despite the budget (another instance sharing the IP, or the cap moving)
+// gets exactly one retry after a short pause — enough to cross a window boundary, not enough to
+// stack retries under load.
+async function budgetedGet<T>(url: string, headers: Record<string, string>): Promise<T> {
+  await acquireSlot();
+  try {
+    return await getJson<T>(url, { source: "geckoterminal", headers, timeoutMs: 10_000 });
+  } catch (e) {
+    if (!(e instanceof UpstreamError && e.status === 429)) throw e;
+    await sleep(RETRY_429_DELAY_MS);
+    await acquireSlot();
+    return getJson<T>(url, { source: "geckoterminal", headers, timeoutMs: 10_000 });
+  }
+}
+
+// Test hook.
+export function _resetGeckoBudget() {
+  callTimes = [];
+}
+
 const ADDRESS_RE = /^0x[0-9a-f]{40}$/;
 // Uniswap v4 pools are 32-byte ids rather than addresses; GeckoTerminal keys them the same way.
 const POOL_RE = /^0x[0-9a-f]{40}$|^0x[0-9a-f]{64}$/;
@@ -84,11 +137,7 @@ export async function fetchTopPool(network: string, token: string): Promise<DexP
 
   let body: GtPoolsResponse;
   try {
-    body = await getJson<GtPoolsResponse>(`${base}/networks/${network}/tokens/${tokenLc}/pools?page=1`, {
-      source: "geckoterminal",
-      headers,
-      timeoutMs: 10_000,
-    });
+    body = await budgetedGet<GtPoolsResponse>(`${base}/networks/${network}/tokens/${tokenLc}/pools?page=1`, headers);
   } catch (e) {
     // Unknown token → GeckoTerminal 404s. That is "no pool", not an outage.
     if (e instanceof UpstreamError && e.status === 404) return null;
@@ -137,7 +186,7 @@ export async function fetchPoolOhlcv(
   const url =
     `${base}/networks/${network}/pools/${pool.address}/ohlcv/${timeframe}` +
     `?aggregate=${aggregate}&limit=${limit}&currency=usd&token=${pool.tokenSide}`;
-  const body = await getJson<GtOhlcvResponse>(url, { source: "geckoterminal", headers, timeoutMs: 10_000 });
+  const body = await budgetedGet<GtOhlcvResponse>(url, headers);
 
   const candles: Candle[] = [];
   for (const row of body.data?.attributes?.ohlcv_list ?? []) {

@@ -3,11 +3,16 @@
 // GeckoTerminal limit (~30 req/min) from being exhausted lives here:
 //
 //   • pool resolution cached 1h (negative result 5m, so an unlisted token can't hammer upstream)
-//   • candles cached 30s per key — the app polls every 30s, so N viewers ≈ 1 upstream call
+//   • candles cached per timeframe — 30s for minute candles (the app polls every 30s, so N viewers
+//     ≈ 1 upstream call), 2m for hourly, 10m for daily: a daily candle doesn't change in 30s, and
+//     refreshing it that often would spend the shared ~30 req/min budget on nothing
 //   • in-flight coalescing — a burst of identical requests shares one upstream call
-//   • last-good on failure — a 429/5xx serves the previous candles flagged `stale: true` for up to
-//     10 minutes rather than blanking the chart; past that it fails so a dead upstream is visible
+//   • last-good on failure — a 429/5xx serves the previous candles flagged `stale: true` (10 min for
+//     intraday, 1h for daily) rather than blanking the chart; past that it fails so a dead upstream
+//     is visible
 //   • bounded LRU on every map, as the CoinGecko chart proxy does
+//   • the upstream call itself is budgeted (sources/geckoterminal.ts) so a range nobody has cached
+//     yet waits for a slot instead of 429ing
 import {
   fetchPoolOhlcv,
   fetchTopPool,
@@ -18,8 +23,16 @@ import {
 } from "../sources/geckoterminal.ts";
 import { log } from "../config/logger.ts";
 
-export const CANDLES_TTL_MS = 30_000;
-export const CANDLES_STALE_GRACE_MS = 10 * 60_000;
+export const CANDLES_TTL_MS: Record<OhlcvTimeframe, number> = {
+  minute: 30_000,
+  hour: 2 * 60_000,
+  day: 10 * 60_000,
+};
+export const CANDLES_STALE_GRACE_MS: Record<OhlcvTimeframe, number> = {
+  minute: 10 * 60_000,
+  hour: 10 * 60_000,
+  day: 60 * 60_000,
+};
 const POOL_TTL_MS = 60 * 60_000;
 const POOL_NEG_TTL_MS = 5 * 60_000;
 const CACHE_MAX = 500;
@@ -97,9 +110,11 @@ export async function getDexOhlcv(req: DexOhlcvRequest): Promise<DexOhlcvRespons
   if (!network) throw new Error(`chain ${req.chainId} has no DEX chart source`);
 
   const key = `${req.chainId}:${req.token}:${req.timeframe}:${req.aggregate}:${req.limit}`;
+  const ttlMs = CANDLES_TTL_MS[req.timeframe];
+  const graceMs = CANDLES_STALE_GRACE_MS[req.timeframe];
   const hit = candleCache.get(key);
   const now = Date.now();
-  if (hit && now - hit.at < CANDLES_TTL_MS) return hit.value;
+  if (hit && now - hit.at < ttlMs) return hit.value;
 
   const pending = inflight.get(key);
   if (pending) return pending;
@@ -121,13 +136,13 @@ export async function getDexOhlcv(req: DexOhlcvRequest): Promise<DexOhlcvRespons
         stale: false,
         candles,
       };
-      boundedSet(candleCache, key, body, CANDLES_STALE_GRACE_MS);
+      boundedSet(candleCache, key, body, graceMs);
       return body;
     } catch (e) {
       // A missing pool is a fact about the token, not an outage — never mask it with stale data.
       if (e instanceof NoPoolError) throw e;
       const last = candleCache.get(key);
-      if (last && Date.now() - last.at < CANDLES_STALE_GRACE_MS) {
+      if (last && Date.now() - last.at < graceMs) {
         log.warn("dex ohlcv upstream failed — serving last-good", {
           key,
           ageSec: Math.round((Date.now() - last.at) / 1000),
