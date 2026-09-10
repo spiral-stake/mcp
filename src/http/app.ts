@@ -15,6 +15,8 @@ import { warmer } from "../warmer/index.ts";
 import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { fetchMarketChart } from "../sources/coingecko.ts";
+import { getDexOhlcv, isChartableChain, NoPoolError } from "../core/dexOhlcv.ts";
+import { OHLCV_AGGREGATES, OHLCV_MAX_LIMIT, OHLCV_TIMEFRAMES, type OhlcvTimeframe } from "../sources/geckoterminal.ts";
 import { buildAppMarkets } from "./appMarkets.ts";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { buildMcpServer } from "../mcp/server.ts";
@@ -318,6 +320,45 @@ app.get("/v1/prices/chart", async (c) => {
     return c.json(data);
   } catch (e) {
     throw new ApiError("upstream_unavailable", `CoinGecko chart unavailable: ${e instanceof Error ? e.message : String(e)}`);
+  }
+});
+
+// ── v1: app-surface — DEX OHLCV price chart (ON-DEMAND, 30s cache, last-good on upstream failure) ──
+// For collateral with no CoinGecko/TradingView chart (new Robinhood Chain tokens). Caller supplies
+// token/timeframe/aggregate/limit, so every param is validated to GeckoTerminal's accepted set
+// before anything reaches upstream; caching + coalescing live in core/dexOhlcv.ts.
+const TOKEN_RE = /^0x[0-9a-fA-F]{40}$/;
+
+app.get("/v1/prices/ohlcv", async (c) => {
+  const chainId = chainOf(c);
+  if (!isChartableChain(chainId)) throw new ApiError("bad_request", `No DEX chart source for chainId ${chainId}`);
+
+  const tokenRaw = c.req.query("token") ?? "";
+  if (!TOKEN_RE.test(tokenRaw)) throw new ApiError("bad_request", "valid token address query param is required");
+  const token = tokenRaw.toLowerCase();
+
+  const timeframe = (c.req.query("timeframe") ?? "hour") as OhlcvTimeframe;
+  if (!OHLCV_TIMEFRAMES.includes(timeframe)) {
+    throw new ApiError("bad_request", `timeframe must be one of ${OHLCV_TIMEFRAMES.join(", ")}`);
+  }
+  const aggregate = Number(c.req.query("aggregate") ?? "1");
+  if (!OHLCV_AGGREGATES[timeframe].includes(aggregate)) {
+    throw new ApiError("bad_request", `aggregate for ${timeframe} must be one of ${OHLCV_AGGREGATES[timeframe].join(", ")}`);
+  }
+  const limit = Number(c.req.query("limit") ?? "168");
+  if (!Number.isInteger(limit) || limit < 1 || limit > OHLCV_MAX_LIMIT) {
+    throw new ApiError("bad_request", `limit must be 1..${OHLCV_MAX_LIMIT}`);
+  }
+
+  try {
+    const body = await getDexOhlcv({ chainId, token, timeframe, aggregate, limit });
+    // Short edge/browser cache: the server cache is 30s, so a 15s hint halves the upstream cost of
+    // a page reload without ever serving a candle older than the app's own poll interval.
+    c.header("Cache-Control", "public, max-age=15");
+    return c.json(body);
+  } catch (e) {
+    if (e instanceof NoPoolError) throw new ApiError("not_found", e.message);
+    throw new ApiError("upstream_unavailable", `DEX chart unavailable: ${e instanceof Error ? e.message : String(e)}`);
   }
 });
 

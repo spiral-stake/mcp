@@ -51,6 +51,10 @@ const schema = z.object({
   MAINNET_RPC_URL: z.string().url().optional(),
   ROBINHOOD_RPC_URL: z.string().url().optional().or(z.literal("")),
   COINGECKO_API_KEY: z.string().optional(),
+  // CoinGecko PAID key (Basic+). Optional: absent → DEX OHLCV (/v1/prices/ohlcv) reads the public
+  // GeckoTerminal API (~30 req/min, no key); present → the same paths on pro-api.coingecko.com at
+  // 300–500 req/min. Nothing else changes, so this is the rate-limit upgrade path for the perp charts.
+  COINGECKO_PRO_API_KEY: z.string().optional(),
   ROYCO_API_KEY: z.string().optional(),
   // StableWatch is fetched directly (the mcp owns /apy now). Optional: absent → the stable-APY
   // group degrades to last-good/empty rather than blocking boot.

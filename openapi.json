@@ -2081,6 +2081,80 @@
           }
         }
       }
+    },
+    "/v1/prices/ohlcv": {
+      "get": {
+        "summary": "DEX OHLCV price chart (on-demand GeckoTerminal proxy, 30s cache)",
+        "description": "USD candles from the deepest DEX pool holding `token`, for collateral with no CoinGecko/TradingView chart. `stale: true` means the upstream failed and the previous candles (≤10 min old) are being served.",
+        "parameters": [
+          {
+            "name": "chainId",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^0x[0-9a-fA-F]{40}$"
+            }
+          },
+          {
+            "name": "timeframe",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "minute",
+                "hour",
+                "day"
+              ],
+              "default": "hour"
+            }
+          },
+          {
+            "name": "aggregate",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "minute: 1|5|15, hour: 1|4|12, day: 1"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "default": 168,
+              "minimum": 1,
+              "maximum": 1000
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "404": {
+            "description": "No DEX pool indexed for the token"
+          },
+          "503": {
+            "description": "Upstream unavailable"
+          }
+        }
+      }
     }
   },
   "components": {

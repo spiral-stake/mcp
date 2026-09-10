@@ -59,6 +59,28 @@ describe("http surface", () => {
     }
   });
 
+  // Same discipline for the DEX OHLCV proxy: every caller-supplied dimension is checked against
+  // GeckoTerminal's accepted set before any upstream call, so junk can't burn the ~30 req/min budget.
+  it("GET /v1/prices/ohlcv rejects junk token/timeframe/aggregate/limit/chain with 400 (no upstream call)", async () => {
+    const token = "0x020bfC650A365f8BB26819deAAbF3E21291018b4";
+    const bad = [
+      "",
+      "token=cashcat",
+      `token=${token}&timeframe=week`,
+      `token=${token}&timeframe=hour&aggregate=7`,
+      `token=${token}&timeframe=minute&aggregate=4`,
+      `token=${token}&limit=0`,
+      `token=${token}&limit=1001`,
+      `token=${token}&limit=1.5`,
+      `token=${token}&chainId=999`,
+    ];
+    for (const q of bad) {
+      const res = await app.request(`/v1/prices/ohlcv?${q}`);
+      expect(res.status, q).toBe(400);
+      expect(((await res.json()) as any).error.code).toBe("bad_request");
+    }
+  });
+
   // The app caches this response for 30 minutes, so an empty 200 during a cold start would
   // poison its cache long after recovery. It must 503 instead (the dashboard's old behaviour).
   describe("GET /v1/stable-apy", () => {
