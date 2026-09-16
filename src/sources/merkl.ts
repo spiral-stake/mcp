@@ -3,9 +3,11 @@
 // 30/60/90d windows). Ported from api-services/merkl.ts. localStorage SWR caching is dropped —
 // the warmer + RawStore provide that; here we keep pure fetch + the step-function reader.
 import { getJson } from "./http.ts";
+import { env } from "../config/env.ts";
 
 const MERKL_BASE = "https://api.merkl.xyz";
 const MERKL_APP_BASE = "https://app.merkl.xyz";
+const DAY_MS = 86_400_000;
 
 // apr is already a percentage (e.g. 8.76 → 8.76%); ts is in milliseconds.
 export interface MerklAprRecord {
@@ -173,11 +175,70 @@ export const fetchMerklIncentiveData = async (
       collateralHistories[market] = mergeAprRecords(metas.map((m) => recordsById[m.id] ?? []));
     }
   }
+  await mergeSpiralIncentives(chainId, wanted, collateralSpot, collateralHistories, now);
   return { spot, collateralSpot, histories, collateralHistories };
 };
 
 const mergeAprRecords = (histories: MerklAprRecord[][]): MerklAprRecord[] =>
   histories.flat().sort((a, b) => a.ts - b.ts);
+
+// Spiral's own Merkl campaigns (Encompassing: the dashboard computes rewards on each position's looped
+// collateral at ratePct / refLeverage, see v2-dashboard/server/routes/merkl.js). They are collateral-side
+// incentives exactly like MORPHOCOLLATERAL — the rate on collateral is leverage-scaled by the ladder —
+// so they merge into the same spot + history, with the Merkl opportunity page as the link. Throws on a
+// dashboard failure so the warmer keeps last-good instead of dropping a live incentive.
+interface SpiralCampaign {
+  campaign: string;
+  chainId: number;
+  marketId: string;
+  ratePct: number;
+  refLeverage: number;
+  rewardSymbol: string;
+  start: number; // unix seconds
+  end: number;
+  remaining: number;
+  lastEpoch: number | null;
+}
+
+const mergeSpiralIncentives = async (
+  chainId: number,
+  wanted: Set<string>,
+  collateralSpot: MerklSpotIncentives,
+  collateralHistories: MerklIncentiveHistories,
+  nowMs: number,
+): Promise<void> => {
+  if (!env.DASHBOARD_URL) return;
+  const campaigns = await getJson<SpiralCampaign[]>(`${env.DASHBOARD_URL}/merkl/campaigns`, { source: "dashboard", retries: 2 });
+  const merkl = await getJson<Array<{ opportunityId?: string | number; params?: { rewardsUrl?: string } }>>(
+    `${MERKL_BASE}/v4/campaigns?chainId=${chainId}&type=ENCOMPASSING&items=100`,
+    { source: "merkl", retries: 1 },
+  ).catch(() => []);
+
+  for (const c of campaigns) {
+    const market = c.marketId.toLowerCase();
+    if (c.chainId !== chainId || !wanted.has(market) || nowMs < c.start * 1000) continue;
+    // Accrual stops at the campaign end, or at the last paid epoch once the budget is exhausted.
+    const endMs = (c.remaining > 0 ? c.end : (c.lastEpoch ?? c.start)) * 1000;
+    const apr = c.ratePct / c.refLeverage; // rate on collateral, e.g. 25% / 10 = 2.5%
+    const rewardsUrl = `${env.DASHBOARD_URL}/merkl/${c.campaign}/rewards.json`;
+    const opportunityId = merkl.find((m) => m.params?.rewardsUrl === rewardsUrl)?.opportunityId;
+    const url = opportunityId ? `${MERKL_APP_BASE}/opportunities/${opportunityId}` : "";
+
+    // Daily step records from start to the active end (the reader treats a >2-day gap as ended).
+    const records: MerklAprRecord[] = [];
+    for (let ts = c.start * 1000; ts <= Math.min(nowMs, endMs); ts += DAY_MS) records.push({ ts, apr });
+    if (endMs < nowMs) records.push({ ts: endMs, apr: 0 });
+    collateralHistories[market] = mergeAprRecords([collateralHistories[market] ?? [], records]);
+
+    if (nowMs >= endMs) continue;
+    const prev = collateralSpot[market];
+    collateralSpot[market] = {
+      apy: ((prev ? Number(prev.apy) : 0) + apr).toFixed(2),
+      breakdown: [...(prev?.breakdown ?? []), { symbol: c.rewardSymbol, apy: apr.toFixed(2) }],
+      url: prev?.url || url,
+    };
+  }
+};
 
 const MAX_SNAPSHOT_STALENESS_MS = 2 * 24 * 60 * 60 * 1000;
 

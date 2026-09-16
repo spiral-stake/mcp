@@ -48,6 +48,10 @@ const schema = z.object({
   MIN_BORROWABLE_USD: z.coerce.number().nonnegative().default(10000),
   PT_MINIMUM_MATURITY_DAYS: z.coerce.number().nonnegative().default(10),
 
+  // Dashboard service — source of Spiral's own Merkl (Encompassing) campaigns, merged into the
+  // collateral-side incentive of their market (sources/merkl.ts). Empty string disables the merge.
+  DASHBOARD_URL: z.string().default("https://dashboard.spiralstake.xyz"),
+
   MAINNET_RPC_URL: z.string().url().optional(),
   ROBINHOOD_RPC_URL: z.string().url().optional().or(z.literal("")),
   COINGECKO_API_KEY: z.string().optional(),
