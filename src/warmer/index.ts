@@ -26,9 +26,11 @@ import { equityVaultsFor } from "../data/equityVaults.ts";
 import {
   fetchStUSDApy,
   fetchSpUSDGApy,
+  fetchWsNETStaking,
   fetchAllCollateralValuesInLoanToken,
   isStUSDS,
   isSpUSDG,
+  isWsNET,
 } from "../sources/onchain.ts";
 import { registries } from "../data/markets.ts";
 
@@ -94,6 +96,7 @@ export class Warmer {
     ];
     const hasStUSDS = markets.some((m) => isStUSDS(m.collateralToken.address));
     const hasSpUSDG = markets.some((m) => isSpUSDG(m.collateralToken.address));
+    const hasWsNET = markets.some((m) => isWsNET(m.collateralToken.address));
 
     const jobs: WarmJob[] = [
       {
@@ -239,6 +242,15 @@ export class Warmer {
         policy: POLICY.onchainApy,
         required: false,
         run: () => fetchSpUSDGApy(),
+      });
+    }
+    if (hasWsNET) {
+      jobs.push({
+        name: "onchain-wsnet-staking",
+        key: KEYS.onchainWsNETStaking(),
+        policy: POLICY.onchainStaking,
+        required: false, // display-only: a failed read hides the tile, never blocks /ready
+        run: () => fetchWsNETStaking(),
       });
     }
     // Equity vaults: warm each stock market's borrow APR + liquidity + price. Not required (a

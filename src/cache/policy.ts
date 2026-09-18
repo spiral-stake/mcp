@@ -27,6 +27,8 @@ export const POLICY = {
   defillama: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
   royco: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
   onchainApy: { refreshEverySec: 12 * H, staleAfterSec: 12 * H } satisfies WarmPolicy,
+  // The index itself is displayed and grows ~1.5%/day, so it is refreshed hourly (4 cheap reads).
+  onchainStaking: { refreshEverySec: 1 * H, staleAfterSec: 3 * H } satisfies WarmPolicy,
   // Collateral APY — Pendle PT (implied APY): faster cadence.
   pendle: { refreshEverySec: 30 * M, staleAfterSec: 30 * M } satisfies WarmPolicy,
 
@@ -77,6 +79,7 @@ export const KEYS = {
   pendle: () => `apy:pendle:markets`,
   onchainStUSDS: () => `apy:onchain:stusds`,
   onchainSpUSDG: () => `apy:onchain:spusdg`,
+  onchainWsNETStaking: () => `staking:onchain:wsnet`,
   merkl: (chainId: number) => `merkl:incentives:${chainId}`,
   prices: (chainId: number) => `prices:coingecko:${chainId}`,
   onchainCollateralValue: (chainId: number) => `onchain:collateralValue:${chainId}`,

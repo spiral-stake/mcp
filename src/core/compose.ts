@@ -2,7 +2,7 @@
 // Composes the full internal Market[] from WARM RAW only (never fetches). Every numeric step
 // mirrors the app so the downstream contract + app-surface endpoints match like-for-like.
 import BigNumber from "bignumber.js";
-import { Market } from "../types/index.ts";
+import { Market, StakingDistribution } from "../types/index.ts";
 import { formatUnits } from "./formatUnits.ts";
 import { calcLeverage, calcLeverageApy } from "./leverage.ts";
 import { resolveTokenApy, resolveTokenApyHistory, type ApyHistoryPoint, type ApySource } from "./apy.ts";
@@ -13,7 +13,7 @@ import { env } from "../config/env.ts";
 import { ROBINHOOD_CHAIN_ID } from "../config/chains.ts";
 import { rawStore, type FreshView } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
-import { isStUSDS, isSpUSDG } from "../sources/onchain.ts";
+import { isStUSDS, isSpUSDG, isWsNET } from "../sources/onchain.ts";
 import type { MorphoMarketData, BorrowHistoryPoint } from "../sources/morpho.ts";
 import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import type { ApySnapshot } from "../sources/stablewatch.ts";
@@ -49,6 +49,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
   const vRoyco = rawStore.view<Record<string, { apy: string; history: ApyHistoryPoint[] }>>(KEYS.roycoAll(chainId));
   const vStUSDS = rawStore.view<string>(KEYS.onchainStUSDS());
   const vSpUSDG = rawStore.view<string>(KEYS.onchainSpUSDG());
+  const vWsNETStaking = rawStore.view<StakingDistribution>(KEYS.onchainWsNETStaking());
   const vMerkl = rawStore.view<MerklIncentiveData>(KEYS.merkl(chainId));
   const vBorrowHist = rawStore.view<Record<string, BorrowHistoryPoint[]>>(KEYS.morphoBorrowHistory(chainId));
   const vExit = rawStore.view<ExitLiquidityMap>(KEYS.exitLiquidity(chainId));
@@ -166,6 +167,10 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     market.collateralToken = {
       ...market.collateralToken,
       apy: tokenApy,
+      // Display-only and kept out of `apy` on purpose — see StakingDistribution.
+      ...(isWsNET(market.collateralToken.address) && vWsNETStaking?.value
+        ? { stakingDistribution: vWsNETStaking.value }
+        : {}),
       valueInUsd: collateralTokenValueInLoanToken.multipliedBy(loanTokenValueInUsd),
       ...(market.collateralToken.underlying && {
         underlying: {
@@ -241,6 +246,7 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
     [KEYS.roycoAll(chainId)]: vRoyco,
     [KEYS.onchainStUSDS()]: vStUSDS,
     [KEYS.onchainSpUSDG()]: vSpUSDG,
+    [KEYS.onchainWsNETStaking()]: vWsNETStaking,
     [KEYS.merkl(chainId)]: vMerkl,
     [KEYS.morphoBorrowHistory(chainId)]: vBorrowHist,
     [KEYS.exitLiquidity(chainId)]: vExit,

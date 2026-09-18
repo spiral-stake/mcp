@@ -16,13 +16,16 @@ import {
 } from "viem";
 import { mainnet } from "viem/chains";
 import { env } from "../config/env.ts";
-import { Market } from "../types/index.ts";
+import { Market, StakingDistribution } from "../types/index.ts";
 import { readAddresses } from "../data/markets.ts";
 
 const STUSDS_ADDRESS = "0x99CD4Ec3f88A45940936F469E4bB72A2A701EEB9";
 const SPUSDG_ADDRESS = "0xde770c84FE66E063336b31737cFE9790f18c4087";
+const WSNET_ADDRESS = "0x63C12667638f2Ae6fC6ae09B43D98Ec84a8586eA";
+const SNET_ADDRESS = "0xb773ec2c326b7f98a5a83fc098825492f020a4c7"; // rebasing Staked NET that wsNET wraps
 const ROBINHOOD_CHAIN_ID = 4663;
 const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
+const SECONDS_PER_DAY = 24 * 60 * 60;
 
 const stUSDSAbi = [
   { name: "str", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -30,6 +33,11 @@ const stUSDSAbi = [
 const spUSDGAbi = [
   { name: "vsr", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
 ] as const;
+// sNET.index(): NET per wsNET, 9 decimals. Every staking distribution (rebase) raises it.
+const sNETAbi = [
+  { name: "index", type: "function", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+] as const;
+const SNET_INDEX_DECIMALS = 9;
 
 // Minimal FlashLeverage ABI — only the read the composition needs.
 const flashLeverageAbi = [
@@ -107,6 +115,7 @@ const rayRateToApy = (rate: bigint): string => {
 
 export const isStUSDS = (address: string) => address.toLowerCase() === STUSDS_ADDRESS.toLowerCase();
 export const isSpUSDG = (address: string) => address.toLowerCase() === SPUSDG_ADDRESS.toLowerCase();
+export const isWsNET = (address: string) => address.toLowerCase() === WSNET_ADDRESS.toLowerCase();
 
 export async function fetchStUSDApy(): Promise<string> {
   const rate = (await getMainnetClient().readContract({
@@ -126,6 +135,49 @@ export async function fetchSpUSDGApy(): Promise<string> {
     functionName: "vsr",
   })) as bigint;
   return rayRateToApy(rate);
+}
+
+// wsNET staking distribution: the REALISED growth of sNET's index over a trailing window, compounded
+// to a 30-day rate. Stateless on purpose — the index is read now and at a historical block, so the
+// figure survives a restart (the raw store is in-memory) and needs no history of our own.
+//
+// The historical block is only ESTIMATED from recent block times (Robinhood's block time is not
+// fixed); the rate is then computed over the ACTUAL time between the two blocks, so an imprecise
+// estimate shifts the window slightly but never skews the rate. Throws (job keeps last-good, the
+// tile hides) when there is no usable window — e.g. the contract is younger than the window.
+const STAKING_WINDOW_DAYS = 7;
+const BLOCK_TIME_SAMPLE = 100_000n;
+
+export async function fetchWsNETStaking(): Promise<StakingDistribution> {
+  const client = getRobinhoodClient();
+  if (!client) throw new Error("ROBINHOOD_RPC_URL is not configured");
+
+  const latest = await client.getBlock();
+  if (latest.number <= BLOCK_TIME_SAMPLE) throw new Error("wsNET staking: chain too short to sample block time");
+  const sample = await client.getBlock({ blockNumber: latest.number - BLOCK_TIME_SAMPLE });
+  const secondsPerBlock = Number(latest.timestamp - sample.timestamp) / Number(BLOCK_TIME_SAMPLE);
+  if (!(secondsPerBlock > 0)) throw new Error("wsNET staking: could not derive block time");
+
+  const blocksBack = BigInt(Math.round((STAKING_WINDOW_DAYS * SECONDS_PER_DAY) / secondsPerBlock));
+  if (blocksBack >= latest.number) throw new Error("wsNET staking: window predates the chain");
+  const past = await client.getBlock({ blockNumber: latest.number - blocksBack });
+
+  const readIndex = (blockNumber: bigint) =>
+    client.readContract({ abi: sNETAbi, address: SNET_ADDRESS as `0x${string}`, functionName: "index", blockNumber }) as Promise<bigint>;
+  // Both reads are pinned to block numbers, so "now" and the block timestamp above are the same block.
+  const [indexNow, indexPast] = await Promise.all([readIndex(latest.number), readIndex(past.number)]);
+
+  const elapsedDays = Number(latest.timestamp - past.timestamp) / SECONDS_PER_DAY;
+  if (!(elapsedDays >= 1) || indexPast <= 0n || indexNow <= 0n) {
+    throw new Error("wsNET staking: no usable window");
+  }
+
+  const growth = Number(indexNow) / Number(indexPast); // 9-decimal values, well inside double precision
+  return {
+    index: BigNumber(viemFormatUnits(indexNow, SNET_INDEX_DECIMALS)).toFixed(4),
+    monthlyRatePct: BigNumber((Math.pow(growth, 30 / elapsedDays) - 1) * 100).toFixed(2),
+    windowDays: Math.round(elapsedDays),
+  };
 }
 
 // Reads getCollateralValueInLoanToken(params, 1 collateral unit) for every market via multicall,

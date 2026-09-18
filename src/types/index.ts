@@ -30,9 +30,20 @@ export interface Token {
   coingeckoId?: string;
 }
 
+// Staking distribution of a rebase-wrapper collateral (wsNET). Deliberately NOT part of `apy`: it is
+// denominated in the underlying token (more NET per wsNET), not dollars, and it already reaches the
+// position through the collateral's price — folding it into `apy` would double-count it and would
+// flip sign through calcLeverageApy's uncorrelated branch. Display-only.
+export interface StakingDistribution {
+  index: string; // underlying per wrapped token, e.g. "3.2581" NET per wsNET
+  monthlyRatePct: string; // realised index growth over the window, compounded to 30 days
+  windowDays: number; // the window actually measured
+}
+
 export interface CollateralToken extends Token {
   apy: string;
   info: CollateralTokenInfo;
+  stakingDistribution?: StakingDistribution;
 
   // PT specific
   isPt: boolean;
