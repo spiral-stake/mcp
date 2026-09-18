@@ -79,6 +79,15 @@ export function isExitNoRoute(info?: ExitSlippageFields): boolean {
   return s100 === null || (typeof s100 === "number" && s100 > LISTING_MAX_SLIPPAGE);
 }
 
+// True when a market is deliberately listed WITHOUT a DEX exit route: the curated manualExitOnly flag
+// is set AND the route is still missing. Selling the collateral through the aggregator is withheld
+// (a fill would be near-worthless); the user exits by repaying the debt and withdrawing collateral
+// in-kind. Tied to the live reading on purpose: once a real route is measured this turns false by
+// itself and the market reverts to a normal one-click-close market, with no config change.
+export function isManualExitOnly(info?: ExitSlippageFields & { manualExitOnly?: boolean }): boolean {
+  return info?.manualExitOnly === true && isExitNoRoute(info);
+}
+
 // True when a token can't be safely exited at $100k, i.e. a candidate for noSwapRoute.
 // Un-flagging stays a manual decision; a healthy reading is only a suggestion.
 export function isExitThin(info?: ExitSlippageFields): boolean {

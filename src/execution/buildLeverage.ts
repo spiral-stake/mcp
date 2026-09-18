@@ -22,6 +22,7 @@ import { calcFlashLoanAmount, calcLeverage, calcLeverageApy, calcLtv, oracleRefe
 import { formatUnits, parseUnits } from "../core/formatUnits.ts";
 import { buildEquityMarkets } from "../core/equity.ts";
 import { composeSnapshot } from "../core/compose.ts";
+import { isAgentEligible } from "../core/strategy.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
 import { readAddresses, readToken } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
@@ -198,8 +199,9 @@ async function prepareLeverage(input: SimulateLeverageInput): Promise<PreparedLe
   const market = cm.market;
   // Both profiles are leverageable through the same swapAndLeverage path — correlated yield loops and
   // uncorrelated perps alike. Equity vaults are synthetic and never enter this snapshot, so they're
-  // already excluded above ("Unknown strategy"); `visible` is the real eligibility gate.
-  if (!market.visible) throw new Error("Market is not currently eligible for leverage");
+  // already excluded above ("Unknown strategy"); agent eligibility (`visible`, minus manual-exit
+  // markets that can't be closed from here) is the real gate.
+  if (!isAgentEligible(market)) throw new Error("Market is not currently eligible for leverage");
   assertMarketDataFresh(chainId); // fail-closed: never size a position off stale market data
 
   const addresses = readAddresses(chainId);

@@ -7,7 +7,7 @@ import { formatUnits } from "./formatUnits.ts";
 import { calcLeverage, calcLeverageApy } from "./leverage.ts";
 import { resolveTokenApy, resolveTokenApyHistory, type ApyHistoryPoint, type ApySource } from "./apy.ts";
 import { avgCollateralApyOverDays, computeAvgLeverageApy } from "./leverageApy.ts";
-import { isExitNoRoute } from "./exitLiquidity.ts";
+import { isExitNoRoute, isManualExitOnly } from "./exitLiquidity.ts";
 import { readMarkets } from "../data/markets.ts";
 import { env } from "../config/env.ts";
 import { ROBINHOOD_CHAIN_ID } from "../config/chains.ts";
@@ -212,8 +212,9 @@ export function composeSnapshot(chainId: number): ComposedSnapshot {
       !market.collateralToken.info?.noSwapRoute &&
       // No usable exit at $100k (no route, or >2% slippage) → hide, don't serve it as a "thin"
       // option. Mirrors the app's Strategies filter (isExitNoRoute). Unmeasured (undefined) is
-      // left visible — we only hide on a known-bad reading.
-      !isExitNoRoute(market.collateralToken.info) &&
+      // left visible — we only hide on a known-bad reading. Exception: a curated manual-exit market
+      // is listed without a route (the app withholds one-click close and unwinds via repay + withdraw).
+      (!isExitNoRoute(market.collateralToken.info) || isManualExitOnly(market.collateralToken.info)) &&
       (!market.collateralToken.isPt ||
         (market.collateralToken.maturityDaysLeft ?? 0) > env.PT_MINIMUM_MATURITY_DAYS) &&
       // Robinhood-chain exception: keep its (young, thin) markets listed even when borrowable

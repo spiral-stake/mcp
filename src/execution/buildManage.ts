@@ -19,6 +19,7 @@ import flashLeverageJson from "../abi/FlashLeverage.sol/FlashLeverage.json" with
 import flashLeverageRouterJson from "../abi/FlashLeverageRouter.sol/FlashLeverageRouter.json" with { type: "json" };
 import { calcIncreaseLeverageFlashLoanAmount, calcLtv } from "../core/leverage.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
+import { isManualExitOnly } from "../core/exitLiquidity.ts";
 import { parseUnits } from "../core/formatUnits.ts";
 import { readAddresses } from "../data/markets.ts";
 import { getSwapData, swapFeeBps } from "./swap.ts";
@@ -155,6 +156,14 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
   switch (action) {
     case "close": {
       // Swap the entire collateral back to the loan token, repay the debt, return the remainder.
+      // A manual-exit market has no usable DEX route for its collateral: the quote is near-worthless,
+      // and on a debt-free position `deleverage` would still execute it. Refuse before quoting.
+      if (isManualExitOnly(collateral.info)) {
+        throw new Error(
+          `'close' is not available for ${collateral.symbol}: there is no DEX exit route for it yet. ` +
+            `Unwind manually instead — 'repay' the debt, then 'remove_collateral' to withdraw ${collateral.symbol} in-kind.`,
+        );
+      }
       const swap = await getSwapData(chainId, collateral.isPt, flashLeverageAddress, collateral.address, loan.address, pos.collateralRaw, slippage, 0, oracleReferenceOut(market, collateral.address, pos.collateralRaw, loan.address));
       minTokenOut = minOut(swap.amountOut);
       to = flashLeverageAddress;

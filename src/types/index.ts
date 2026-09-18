@@ -186,6 +186,10 @@ export interface CollateralTokenInfo {
   yieldSource: string;
   category: TokenCategory;
   noSwapRoute?: Boolean;
+  // Curated opt-in: list the market in the app even though its collateral has no DEX exit route.
+  // One-click close is withheld and the user exits by repaying the debt and withdrawing collateral
+  // in-kind. Only takes effect while the route is actually missing — see isManualExitOnly().
+  manualExitOnly?: boolean;
 
   exitSlippage100k?: number | null;
   exitSlippage500k?: number | null;

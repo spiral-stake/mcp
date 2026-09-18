@@ -64,7 +64,7 @@ async function runBuild<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/unknown strategy|not configured|already closed|not correlated|not currently eligible|is required|invalid|not above/i.test(msg)) {
+    if (/unknown strategy|not configured|already closed|not correlated|not currently eligible|is not available|is required|invalid|not above/i.test(msg)) {
       throw new ApiError("bad_request", msg);
     }
     throw new ApiError("upstream_unavailable", msg);

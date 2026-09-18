@@ -8,6 +8,7 @@ import { Market, CollateralTokenInfo } from "../types/index.ts";
 import { calcLeverage, calcLeverageApy } from "./leverage.ts";
 import {
   exitLiquidityTier,
+  isManualExitOnly,
   LISTING_MAX_SLIPPAGE,
   DEPTH_MAX_SLIPPAGE,
 } from "./exitLiquidity.ts";
@@ -339,12 +340,20 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   return strategy;
 }
 
+// Agent-facing eligibility. `visible` is the app's listing flag; a manual-exit market is visible in
+// the app (which withholds one-click close and walks the user through repay + withdraw) but stays
+// off the agent surface: an agent cannot unwind it through `close`, so it is neither discoverable
+// nor leverageable here.
+export function isAgentEligible(market: Market): boolean {
+  return market.visible === true && !isManualExitOnly(market.collateralToken.info);
+}
+
 export function buildStrategies(chainId: number): StrategiesEnvelope {
   const snapshot = composeSnapshot(chainId);
   // Agents see only eligible strategies (no fake-0 / thin / near-maturity / low-liquidity markets).
   // Equity vaults are appended here so agents discover them alongside the loop markets.
   const strategies = [...snapshot.markets, ...equityComposed(chainId, snapshot)]
-    .filter((cm) => cm.market.visible)
+    .filter((cm) => isAgentEligible(cm.market))
     .map((cm) => toStrategy(cm, snapshot));
   return { asOf: snapshot.asOf, chainId, count: strategies.length, strategies };
 }
@@ -355,5 +364,5 @@ export function buildStrategy(chainId: number, id: string): Strategy | undefined
     snapshot.markets.find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase()) ??
     equityComposed(chainId, snapshot).find((m) => m.market.morphoMarketId.toLowerCase() === id.toLowerCase());
   // A single strategy is only agent-visible if eligible — hide an ineligible one behind 404.
-  return cm && cm.market.visible ? toStrategy(cm, snapshot) : undefined;
+  return cm && isAgentEligible(cm.market) ? toStrategy(cm, snapshot) : undefined;
 }
