@@ -22,6 +22,11 @@ import {
   type OhlcvTimeframe,
 } from "../sources/geckoterminal.ts";
 import { log } from "../config/logger.ts";
+import { rawStore } from "../cache/store.ts";
+import { KEYS } from "../cache/policy.ts";
+import { isWsNET, NET_ADDRESS } from "../sources/onchain.ts";
+import { ROBINHOOD_CHAIN_ID } from "../config/chains.ts";
+import type { StakingDistribution } from "../types/index.ts";
 
 export const CANDLES_TTL_MS: Record<OhlcvTimeframe, number> = {
   minute: 30_000,
@@ -158,6 +163,30 @@ export async function getDexOhlcv(req: DexOhlcvRequest): Promise<DexOhlcvRespons
 
   inflight.set(key, job);
   return job;
+}
+
+// wsNET does not trade: it is minted by staking NET, and its one indexed pool has a single candle.
+// Its price IS NET x the staking index (that is how its oracle prices it), so it is charted as the
+// NET series scaled by the CURRENT index. One constant for every candle: the latest candles are
+// exact, older ones are overstated by the index growth since (~1.5%/day) — accepted for a chart
+// whose job is to show recent price action around the mark and liquidation lines.
+//
+// The NET candles go through getDexOhlcv under NET's own key, so they share its cache, coalescing and
+// last-good handling; the scale is applied per response, so an index refresh shows up immediately.
+// Volume stays as served — it is USD volume of the NET pool, the market that actually trades.
+export async function getChartOhlcv(req: DexOhlcvRequest): Promise<DexOhlcvResponse> {
+  if (req.chainId !== ROBINHOOD_CHAIN_ID || !isWsNET(req.token)) return getDexOhlcv(req);
+
+  const index = Number(rawStore.view<StakingDistribution>(KEYS.onchainWsNETStaking())?.value?.index);
+  // Never chart unscaled NET under wsNET's name — it would read ~3x too low against the mark line.
+  if (!(index > 0)) throw new Error("wsNET staking index not loaded yet");
+
+  const net = await getDexOhlcv({ ...req, token: NET_ADDRESS.toLowerCase() });
+  return {
+    ...net,
+    token: req.token,
+    candles: net.candles.map((c) => ({ ...c, o: c.o * index, h: c.h * index, l: c.l * index, c: c.c * index })),
+  };
 }
 
 // Test hook — the caches are module singletons.

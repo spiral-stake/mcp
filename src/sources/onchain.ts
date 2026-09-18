@@ -23,6 +23,8 @@ const STUSDS_ADDRESS = "0x99CD4Ec3f88A45940936F469E4bB72A2A701EEB9";
 const SPUSDG_ADDRESS = "0xde770c84FE66E063336b31737cFE9790f18c4087";
 const WSNET_ADDRESS = "0x63C12667638f2Ae6fC6ae09B43D98Ec84a8586eA";
 const SNET_ADDRESS = "0xb773ec2c326b7f98a5a83fc098825492f020a4c7"; // rebasing Staked NET that wsNET wraps
+// NET itself — the token that actually trades (wsNET is minted by staking it, never bought).
+export const NET_ADDRESS = "0xCA9c78Dd337A67F6e0077F65F5E9218719d30eDf";
 const ROBINHOOD_CHAIN_ID = 4663;
 const SECONDS_PER_YEAR = 365 * 24 * 60 * 60;
 const SECONDS_PER_DAY = 24 * 60 * 60;

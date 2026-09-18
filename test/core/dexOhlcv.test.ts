@@ -10,7 +10,9 @@ vi.mock("../../src/sources/geckoterminal.ts", async (importOriginal) => {
   return { ...actual, fetchTopPool, fetchPoolOhlcv };
 });
 
-import { getDexOhlcv, NoPoolError, _resetDexOhlcvCaches, CANDLES_TTL_MS, CANDLES_STALE_GRACE_MS } from "../../src/core/dexOhlcv.ts";
+import { getDexOhlcv, getChartOhlcv, NoPoolError, _resetDexOhlcvCaches, CANDLES_TTL_MS, CANDLES_STALE_GRACE_MS } from "../../src/core/dexOhlcv.ts";
+import { rawStore } from "../../src/cache/store.ts";
+import { KEYS } from "../../src/cache/policy.ts";
 
 const TOKEN = "0x020bfc650a365f8bb26819deaabf3e21291018b4";
 const POOL = { address: "0xd42a491087a15e5afd51feb3606066cc152d2b09", name: "CASHCAT / WETH 0.3%", dex: "uniswap-v3-robinhood", reserveUsd: 3e6, tokenSide: "base" as const };
@@ -117,5 +119,38 @@ describe("core/dexOhlcv", () => {
   it("rejects a chain with no GeckoTerminal network", async () => {
     await expect(getDexOhlcv({ ...req, chainId: 999 })).rejects.toThrow(/no DEX chart source/);
     expect(fetchTopPool).not.toHaveBeenCalled();
+  });
+
+  describe("wsNET — charted as NET x the staking index", () => {
+    const WSNET = "0x63c12667638f2ae6fc6ae09b43d98ec84a8586ea";
+    const NET = "0xca9c78dd337a67f6e0077f65f5e9218719d30edf";
+    const wsReq = { ...req, token: WSNET };
+
+    it("fetches NET's pool and scales prices by the index, leaving time and volume alone", async () => {
+      rawStore.setOk(KEYS.onchainWsNETStaking(), { index: "3.0000", monthlyRatePct: "50.00", windowDays: 7 }, 900);
+      const res = await getChartOhlcv(wsReq);
+      expect(fetchTopPool).toHaveBeenCalledWith("robinhood", NET);
+      expect(res.token).toBe(WSNET);
+      expect(res.candles).toEqual([{ t: 1, o: 3, h: 6, l: 1.5, c: 4.5, v: 10 }]);
+    });
+
+    it("shares NET's cache entry instead of spending a second upstream call", async () => {
+      rawStore.setOk(KEYS.onchainWsNETStaking(), { index: "3.0000", monthlyRatePct: "50.00", windowDays: 7 }, 900);
+      await getDexOhlcv({ ...req, token: NET });
+      await getChartOhlcv(wsReq);
+      expect(fetchPoolOhlcv).toHaveBeenCalledTimes(1);
+    });
+
+    it("refuses to chart unscaled NET under wsNET's name without a usable index", async () => {
+      rawStore.setOk(KEYS.onchainWsNETStaking(), { index: "0", monthlyRatePct: "0.00", windowDays: 7 }, 900);
+      await expect(getChartOhlcv(wsReq)).rejects.toThrow(/index not loaded/);
+      expect(fetchPoolOhlcv).not.toHaveBeenCalled();
+    });
+
+    it("passes every other token straight through", async () => {
+      const res = await getChartOhlcv(req);
+      expect(res.candles).toEqual(CANDLES);
+      expect(fetchTopPool).toHaveBeenCalledWith("robinhood", TOKEN);
+    });
   });
 });

@@ -15,7 +15,7 @@ import { warmer } from "../warmer/index.ts";
 import { buildStrategies, buildStrategy } from "../core/strategy.ts";
 import { composeSnapshot } from "../core/compose.ts";
 import { fetchMarketChart } from "../sources/coingecko.ts";
-import { getDexOhlcv, isChartableChain, NoPoolError } from "../core/dexOhlcv.ts";
+import { getChartOhlcv, isChartableChain, NoPoolError } from "../core/dexOhlcv.ts";
 import { OHLCV_AGGREGATES, OHLCV_MAX_LIMIT, OHLCV_TIMEFRAMES, type OhlcvTimeframe } from "../sources/geckoterminal.ts";
 import { buildAppMarkets } from "./appMarkets.ts";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
@@ -367,7 +367,7 @@ app.get("/v1/prices/ohlcv", async (c) => {
   }
 
   try {
-    const body = await getDexOhlcv({ chainId, token, timeframe, aggregate, limit });
+    const body = await getChartOhlcv({ chainId, token, timeframe, aggregate, limit });
     // Short edge/browser cache under the server TTL for the timeframe (30s / 2m / 10m), so a page
     // reload never serves a candle older than the app's own poll interval.
     c.header("Cache-Control", `public, max-age=${timeframe === "minute" ? 15 : timeframe === "hour" ? 60 : 300}`);
