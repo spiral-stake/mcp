@@ -21,7 +21,16 @@ export interface EquityVaultConfig {
     oracle: string;
     /** Exchange-listed symbol for the TradingView chart of the real share (the on-chain chart only goes back to the token's launch). */
     tradingViewSymbol: string;
+    /**
+     * What the token tracks, as a name a user would search for ("NVIDIA", "S&P 500"). Surfaced as
+     * `info.underlyingCollateral` so the app's strategy search matches the company, not just the ticker.
+     */
+    underlying: string;
+    /** The rest of the sentence "SYMBOL is Robinhood's tokenized …" — names the real share/ETF and its listing. */
+    about: string;
   };
+  /** Who curates the stock market (shown in the vault's description; the app links there via MarketLink). */
+  curator: string;
   /** The stock market's Morpho IRM address (part of its MarketParams tuple). */
   irm: string;
   /** The stock market's LLTV in raw 1e18 units (part of its MarketParams tuple). */
@@ -46,6 +55,8 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
       symbol: "SPY",
+      underlying: "S&P 500",
+      about: "share of the SPDR S&P 500 ETF Trust (NYSE Arca: SPY), which tracks the S&P 500 index",
       tradingViewSymbol: "AMEX:SPY",
       name: "SPY",
       decimals: 18,
@@ -58,6 +69,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     liqLtvPct: 62.5,
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
+    curator: "Longbow",
   },
   {
     chainId: 4663,
@@ -67,6 +79,8 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC",
       symbol: "NVDA",
+      underlying: "NVIDIA",
+      about: "NVIDIA (Nasdaq: NVDA) share",
       tradingViewSymbol: "NASDAQ:NVDA",
       name: "NVDA",
       decimals: 18,
@@ -79,6 +93,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     liqLtvPct: 62.5,
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
+    curator: "Longbow",
   },
   {
     chainId: 4663,
@@ -88,6 +103,8 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0x322F0929c4625eD5bAd873c95208D54E1c003b2d",
       symbol: "TSLA",
+      underlying: "Tesla",
+      about: "Tesla (Nasdaq: TSLA) share",
       tradingViewSymbol: "NASDAQ:TSLA",
       name: "TSLA",
       decimals: 18,
@@ -100,6 +117,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     liqLtvPct: 62.5,
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
+    curator: "Longbow",
   },
   // NetNet Credit stock markets (same Morpho singleton, new Chainlink oracles). The NVDA one is a
   // SECOND market on the same NVDA token — the Longbow one above stays listed for its open positions.
@@ -111,6 +129,8 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0xd0601CE157Db5bdC3162BbaC2a2C8aF5320D9EEC",
       symbol: "NVDA",
+      underlying: "NVIDIA",
+      about: "NVIDIA (Nasdaq: NVDA) share",
       tradingViewSymbol: "NASDAQ:NVDA",
       name: "NVDA",
       decimals: 18,
@@ -123,6 +143,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     liqLtvPct: 62.5,
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
+    curator: "NetNet Credit",
   },
   {
     chainId: 4663,
@@ -132,6 +153,8 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0x4a0E65A3EcceC6dBe60AE065F2e7bb85Fae35eEa",
       symbol: "SPCX",
+      underlying: "SpaceX",
+      about: "SpaceX (Nasdaq: SPCX) share",
       tradingViewSymbol: "NASDAQ:SPCX",
       name: "SPCX",
       decimals: 18,
@@ -144,6 +167,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     liqLtvPct: 62.5,
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
+    curator: "NetNet Credit",
   },
   {
     chainId: 4663,
@@ -153,6 +177,8 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     stock: {
       address: "0xaF3D76f1834A1d425780943C99Ea8A608f8a93f9",
       symbol: "AAPL",
+      underlying: "Apple",
+      about: "Apple (Nasdaq: AAPL) share",
       tradingViewSymbol: "NASDAQ:AAPL",
       name: "AAPL",
       decimals: 18,
@@ -165,6 +191,7 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     liqLtvPct: 62.5,
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
+    curator: "NetNet Credit",
   },
 ];
 
