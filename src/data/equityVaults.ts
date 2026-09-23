@@ -166,14 +166,6 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
   },
-    irm: "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
-    lltvRaw: "625000000000000000",
-    loanToken: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", symbol: "USDG", decimals: 6 },
-    targetLtvPct: 50,
-    liqLtvPct: 62.5,
-    yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
-    yieldLeverage: 10.5,
-  },
 ];
 
 export const equityVaultsFor = (chainId: number): EquityVaultConfig[] =>
