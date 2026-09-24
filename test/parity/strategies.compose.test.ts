@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import BigNumber from "bignumber.js";
 import { rawStore } from "../../src/cache/store.ts";
 import { KEYS } from "../../src/cache/policy.ts";
-import { readMarkets, registries } from "../../src/data/markets.ts";
+import { readMarkets, registries, collateralTokensAsOf } from "../../src/data/markets.ts";
 import { buildStrategies } from "../../src/core/strategy.ts";
 import { calcLeverage, calcLeverageApy } from "../../src/core/leverage.ts";
 import { exitLiquidityTier } from "../../src/core/exitLiquidity.ts";
@@ -182,6 +182,26 @@ describe("strategy composition (seeded fixture)", () => {
     });
     // no verdict leaked into the raw exitLiquidity block
     expect(JSON.stringify(s.exitLiquidity)).not.toContain("deep");
+  });
+
+  it("dates exit liquidity by the source actually served: baked seed vs this token's live sweep", () => {
+    // No sweep yet → the baked collateralTokens.json numbers, dated by the file (block + freshness agree).
+    let s = buildStrategies(CHAIN).strategies.find((x) => x.id === m0.morphoMarketId)!;
+    expect(s.exitLiquidity.asOf).toBe(collateralTokensAsOf);
+    expect(s.freshness.exitLiquidity?.asOf).toBe(collateralTokensAsOf);
+
+    // A sweep that covered OTHER tokens only must not re-date this token's baked numbers.
+    rawStore.setOk(KEYS.exitLiquidity(CHAIN), { "0x000000000000000000000000000000000000dEaD": { exitSlippage100k: 0.5 } }, 86_400);
+    s = buildStrategies(CHAIN).strategies.find((x) => x.id === m0.morphoMarketId)!;
+    expect(s.exitLiquidity.asOf).toBe(collateralTokensAsOf);
+
+    // A sweep that covered this token → its numbers and its timestamp, in both the block and the group.
+    rawStore.setOk(KEYS.exitLiquidity(CHAIN), { [m0.collateralToken.address]: { exitSlippage100k: 0.42 } }, 86_400);
+    const view = rawStore.view(KEYS.exitLiquidity(CHAIN))!;
+    s = buildStrategies(CHAIN).strategies.find((x) => x.id === m0.morphoMarketId)!;
+    expect(s.exitLiquidity.slippagePct?.["100000"]).toBe("0.42");
+    expect(s.exitLiquidity.asOf).toBe(view.asOf);
+    expect(s.freshness.exitLiquidity?.asOf).toBe(view.asOf);
   });
 
   it("attaches per-field-group freshness at the CONTRACT cadences", () => {

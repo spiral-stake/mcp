@@ -19,7 +19,7 @@ import { fetchRoycoVaultApy, fetchRoycoVaultApyHistory } from "../sources/royco.
 import { fetchAllMorphoMarketsData, fetchAllBorrowApyHistories } from "../sources/morpho.ts";
 import { fetchMerklIncentiveData } from "../sources/merkl.ts";
 import { fetchTokenPricesResilient } from "../sources/prices.ts";
-import { fetchExitLiquidity, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
+import { fetchExitLiquidity, exitLiquidityTargets, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import { fetchEquityMarketsData } from "../sources/equity.ts";
 import { fetchChainTvl } from "../sources/tvl.ts";
 import { equityVaultsFor } from "../data/equityVaults.ts";
@@ -204,7 +204,7 @@ export class Warmer {
         required: false,
         run: async () => {
           const prior = this.store.view<ExitLiquidityMap>(KEYS.exitLiquidity(chainId))?.value ?? {};
-          const fresh = await fetchExitLiquidity(markets, chainId);
+          const fresh = await fetchExitLiquidity(exitLiquidityTargets(chainId, markets), chainId);
           return { ...prior, ...fresh };
         },
       },

@@ -143,3 +143,38 @@ describe("equity vaults on /v1/strategies — curator + description", () => {
     expect(new Set(nvda.map((s) => s.curator))).toEqual(new Set(["Longbow", "NetNet Credit"]));
   });
 });
+
+// A vault's exit is the stock -> USDG swap, so its exit liquidity is the stock's. The stock tokens
+// are swept with the loop collaterals; the live reading is overlaid on the vault's info and reaches
+// the agent contract (raw slippage + the tier hint + a truthful asOf). Unswept → unmeasured, no tier.
+describe("equity vaults — exit liquidity from the live sweep", () => {
+  beforeEach(seed);
+
+  const spy = () => equityVaultsFor(CHAIN).find((v) => v.stock.symbol === "SPY")!;
+  const SPY_EXIT = { exitSlippage100k: 0.1, exitSlippage500k: 0.3, exitSlippage1M: 0.45, exitSlippage5M: 9.8, exitSlippage10M: 40.1 };
+
+  it("overlays the swept stock's slippage on its info; an unswept stock stays unmeasured", () => {
+    rawStore.setOk(KEYS.exitLiquidity(CHAIN), { [spy().stock.address]: SPY_EXIT }, 86_400);
+    const loops = composeSnapshot(CHAIN).markets.map((cm) => cm.market);
+    const equity = buildEquityMarkets(CHAIN, loops);
+    expect(equity.find((m) => m.collateralToken.symbol === "SPY")!.collateralToken.info.exitSlippage100k).toBe(0.1);
+    expect(equity.find((m) => m.collateralToken.symbol === "TSLA")!.collateralToken.info.exitSlippage100k).toBeUndefined();
+  });
+
+  it("serves measured exit liquidity, the tier hint and the sweep's asOf on the vault strategy", () => {
+    rawStore.setOk(KEYS.exitLiquidity(CHAIN), { [spy().stock.address]: SPY_EXIT }, 86_400);
+    const view = rawStore.view(KEYS.exitLiquidity(CHAIN))!;
+    const { strategies } = buildStrategies(CHAIN);
+
+    const s = strategies.find((x) => x.id === spy().id)!;
+    expect(s.exitLiquidity).toMatchObject({ measured: true, asOf: view.asOf, direction: "collateral_to_usdc" });
+    expect(s.exitLiquidity.slippagePct).toEqual({ "100000": "0.10", "500000": "0.30", "1000000": "0.45", "5000000": "9.80", "10000000": "40.10" });
+    expect(s.spiralHints?.exitLiquidityTier?.value).toBe("good"); // $1M clean, $5M not
+    expect(s.freshness.exitLiquidity?.asOf).toBe(view.asOf);
+
+    const tsla = strategies.find((x) => x.collateral.symbol === "TSLA")!;
+    expect(tsla.exitLiquidity).toEqual({ measured: false });
+    expect(tsla.spiralHints?.exitLiquidityTier).toBeUndefined();
+    expect(tsla.freshness.exitLiquidity).toBeUndefined();
+  });
+});

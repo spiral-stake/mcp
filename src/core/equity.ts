@@ -11,6 +11,7 @@ import { rawStore } from "../cache/store.ts";
 import { KEYS } from "./../cache/policy.ts";
 import { env } from "../config/env.ts";
 import type { EquityMarketRaw } from "../sources/equity.ts";
+import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 
 // The stock tokens are Robinhood Stock Tokens (docs.robinhood.com/chain/stock-tokens): ERC-20s on
 // Robinhood Chain issued by Robinhood Assets (Jersey) Limited, each giving 1:1 price exposure to one
@@ -56,6 +57,11 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
 
   const equityData =
     rawStore.view<Record<string, EquityMarketRaw>>(KEYS.equityMarkets(chainId))?.value ?? {};
+  // The stock tokens are swept alongside the loop collaterals (exitLiquidityTargets); overlay the
+  // live slippage onto the stock's info exactly as compose.ts does for a loop market, so the agent
+  // surface (exitLiquidity + spiralHints tier) and the app badge read the stock's real exit depth.
+  // Not yet swept (cold start / transient) → stays unmeasured, never a fabricated tier.
+  const exitLiquidity = rawStore.view<ExitLiquidityMap>(KEYS.exitLiquidity(chainId))?.value ?? {};
 
   const out: Market[] = [];
   for (const v of vaults) {
@@ -93,7 +99,7 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
       // syrupUSDG), its DefiLlama/CoinGecko ids (the app would resolve the STOCK's collateral APY
       // from syrup's pool) and its exit-slippage snapshot (the agent surface would grade the stock's
       // exit liquidity on syrup's DEX depth).
-      info: stockTokenInfo(v, yieldMarket),
+      info: { ...stockTokenInfo(v, yieldMarket), ...exitLiquidity[v.stock.address] },
     };
 
     out.push({

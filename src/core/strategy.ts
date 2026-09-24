@@ -16,6 +16,7 @@ import { avgCollateralApyOverDays } from "./leverageApy.ts";
 import { collateralTokensAsOf } from "../data/markets.ts";
 import { KEYS, EXIT_LIQUIDITY_STALE_AFTER_SEC } from "../cache/policy.ts";
 import type { FreshView } from "../cache/store.ts";
+import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import type {
   Strategy,
   LadderPoint,
@@ -120,7 +121,7 @@ const EXIT_SIZES: [keyof Pick<CollateralTokenInfo, "exitSlippage100k" | "exitSli
   ["exitSlippage10M", "10000000"],
 ];
 
-function buildExitLiquidity(info: CollateralTokenInfo | undefined): ExitLiquidity {
+function buildExitLiquidity(info: CollateralTokenInfo | undefined, asOf: string): ExitLiquidity {
   if (!info || info.exitSlippage100k === undefined) {
     return { measured: false };
   }
@@ -132,7 +133,7 @@ function buildExitLiquidity(info: CollateralTokenInfo | undefined): ExitLiquidit
   }
   return {
     measured: true,
-    asOf: collateralTokensAsOf,
+    asOf,
     method: "onchain quote sweep",
     direction: "collateral_to_usdc",
     slippagePct,
@@ -180,9 +181,16 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   const honestHistorical = (v: string | undefined): string | undefined =>
     v === undefined ? undefined : market.correlated ? v : BigNumber(v).multipliedBy(-1).toFixed(2);
 
+  // Exit slippage is served from the live sweep when THIS token was in it, else from the baked
+  // collateralTokens.json seed — so `asOf` (and the freshness group below) name the timestamp of the
+  // numbers actually shown, not the sweep's even when the token's own sweep failed.
+  const exitView = snapshot.views[KEYS.exitLiquidity(chainId)] as FreshView<ExitLiquidityMap> | undefined;
+  const swept = exitView?.value?.[market.collateralToken.address] !== undefined;
+  const exitAsOf = swept ? exitView!.asOf : collateralTokensAsOf;
+
   // exit liquidity + the Spiral opinion block (isolated, with thresholds). Two overridable hints:
   // the exit-liquidity tier, and — for uncorrelated markets — how to read the (carry-only) APYs.
-  const exitLiquidity = buildExitLiquidity(info);
+  const exitLiquidity = buildExitLiquidity(info, exitAsOf);
   const tier = exitLiquidityTier(info);
   const ev = market.equityVault;
   const spiralHints =
@@ -248,13 +256,12 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   const borrowFresh = freshnessFromView(snapshot.views[KEYS.morphoMarkets(chainId)]);
   const apyKey = apySourceKey(chainId, apySource, market.collateralToken.address);
   const collateralApyFresh = apyKey ? freshnessFromView(snapshot.views[apyKey]) : undefined;
-  // Prefer the live warmer's freshness; fall back to the baked file mtime until the first sweep.
+  // Live sweep freshness when this token was swept; the baked file's otherwise.
   const exitFresh: FreshnessGroup | undefined = !exitLiquidity.measured
     ? undefined
-    : freshnessFromView(snapshot.views[KEYS.exitLiquidity(chainId)]) ?? {
-        asOf: collateralTokensAsOf,
-        staleAfterSec: EXIT_LIQUIDITY_STALE_AFTER_SEC,
-      };
+    : swept
+      ? freshnessFromView(exitView)
+      : { asOf: collateralTokensAsOf, staleAfterSec: EXIT_LIQUIDITY_STALE_AFTER_SEC };
 
   const collateral: Strategy["collateral"] = {
     address: market.collateralToken.address,

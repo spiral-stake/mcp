@@ -20,7 +20,8 @@
 //  - PTs are measured via their underlying (the contract exits PT -> underlying -> stable).
 //  - a chain with no CHAIN entry is not measured (never quoted against the wrong chain).
 import { env } from "../config/env.ts";
-import type { Market } from "../types/index.ts";
+import { equityVaultsFor } from "../data/equityVaults.ts";
+import type { CollateralToken, CollateralTokenInfo, Market } from "../types/index.ts";
 
 const KYBER_BASE = "https://aggregator-api.kyberswap.com";
 const CG_URL = "https://api.coingecko.com/api/v3/simple/price";
@@ -206,9 +207,34 @@ async function pool<T, R>(items: T[], limit: number, worker: (t: T) => Promise<R
   return results;
 }
 
-// Measure exit slippage for every collateral in `markets`. Returns a map keyed by the entry
+// What the sweep needs to know about a token: the loop markets' collateral, or a stock token.
+export interface ExitTarget {
+  collateralToken: Pick<CollateralToken, "address" | "decimals" | "isPt" | "underlying"> & {
+    info?: Pick<CollateralTokenInfo, "coingeckoId">;
+  };
+}
+
+// Everything the sweep should measure on a chain: every loop market's collateral, plus — when the
+// equity vaults are enabled — each stock token they hold. A vault exits by selling the stock for
+// USDG on the same aggregator, so its exit liquidity is the stock's; without this the stock vaults
+// shipped `exitLiquidity.measured: false` and no tier, and an agent could not tell whether a $100k
+// SPY vault can be unwound. Deduped by address (Longbow and NetNet both hold NVDA).
+export function exitLiquidityTargets(chainId: number, markets: Market[]): ExitTarget[] {
+  const targets: ExitTarget[] = markets.map((m) => ({ collateralToken: m.collateralToken }));
+  if (!env.EQUITY_VAULTS_ENABLED) return targets;
+  const seen = new Set(markets.map((m) => m.collateralToken.address.toLowerCase()));
+  for (const v of equityVaultsFor(chainId)) {
+    const key = v.stock.address.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    targets.push({ collateralToken: { address: v.stock.address, decimals: v.stock.decimals, isPt: false } });
+  }
+  return targets;
+}
+
+// Measure exit slippage for every target's collateral. Returns a map keyed by the entry
 // (collateral) address; transient tokens are omitted so the warmer keeps their prior value.
-export async function fetchExitLiquidity(markets: Market[], chainId: number): Promise<ExitLiquidityMap> {
+export async function fetchExitLiquidity(markets: ExitTarget[], chainId: number): Promise<ExitLiquidityMap> {
   // No aggregator config for this chain → don't measure (returning {} keeps prior/unmeasured).
   // Never quote a chain's tokens against the wrong chain: that returns "token not found", which the
   // no-route path would otherwise record as a genuine null → a false "thin" tier.
