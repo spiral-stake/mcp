@@ -6,6 +6,7 @@
 import BigNumber from "bignumber.js";
 import { Market, CollateralToken, CollateralTokenInfo, TokenCategory } from "../types/index.ts";
 import { equityVaultsFor, type EquityVaultConfig } from "../data/equityVaults.ts";
+import { oracleTypeOf } from "../data/markets.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "./../cache/policy.ts";
 import { env } from "../config/env.ts";
@@ -124,7 +125,10 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
       avg60dLeverageApy: undefined,
       avg90dLeverageApy: undefined,
       oracle: v.stock.oracle,
-      oracleType: undefined,
+      // The stock market's oracle is curated in oracleTypes.json like every loop market's: a
+      // Chainlink RH<stock>/USD feed prices the share at its traded price, so it liquidates on a
+      // real price fall ("market"). Unset it and the vault ships no oracle.type at all.
+      oracleType: oracleTypeOf(v.stock.oracle),
       curators: undefined,
       visible: true,
       // Liquidity: the SPY stock market's real borrow-side depth — the vault's scaling ceiling. EVERY

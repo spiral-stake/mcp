@@ -40,6 +40,13 @@ const loanTokens = readJson<Array<{ address: string; coingeckoId?: string } & Lo
 );
 const loanTokenByAddress = new Map(loanTokens.map((t) => [t.address.toLowerCase(), t]));
 const oracleTypes = readJson<Record<string, OracleType>>("./oracleTypes.json");
+// Curated oracle-address -> pricing methodology, matched case-insensitively so a checksum
+// difference between oracleTypes.json and a market's config can never silently drop a badge.
+const oracleTypeByAddress = new Map(
+  Object.entries(oracleTypes).map(([address, type]) => [address.toLowerCase(), type]),
+);
+export const oracleTypeOf = (oracle: string | undefined): OracleType | undefined =>
+  oracle ? oracleTypeByAddress.get(oracle.toLowerCase()) : undefined;
 
 const addressesCache = new Map<number, AddressesFile>();
 export function readAddresses(chainId: number): AddressesFile {
@@ -53,12 +60,6 @@ export function readAddresses(chainId: number): AddressesFile {
 export function readMarkets(chainId: number): Market[] {
   const { markets } = readAddresses(chainId);
 
-  // Curated oracle-address -> pricing methodology, matched case-insensitively so a checksum
-  // difference between oracleTypes.json and the addresses file can never silently drop a badge.
-  const oracleTypeByAddress = new Map(
-    Object.entries(oracleTypes).map(([address, type]) => [address.toLowerCase(), type]),
-  );
-
   return Object.keys(markets)
     // Both profiles are served: correlated yield loops AND non-correlated (leveraged-perp) markets.
     // Longs are re-framed for agents in core/strategy.ts (leverageApyPct is the honest financing
@@ -71,9 +72,7 @@ export function readMarkets(chainId: number): Market[] {
 
     market.collateralToken.info = collateralTokens[market.collateralToken.address];
     market.loanToken.coingeckoId = loanTokenByAddress.get(market.loanToken.address.toLowerCase())?.coingeckoId;
-    market.oracleType = market.oracle
-      ? oracleTypeByAddress.get(market.oracle.toLowerCase())
-      : undefined;
+    market.oracleType = oracleTypeOf(market.oracle);
 
     if (!collateralTokens[market.collateralToken.address]) {
       // An unconfigured collateral is a data gap worth surfacing — but readMarkets runs on every

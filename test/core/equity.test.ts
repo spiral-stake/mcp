@@ -73,6 +73,8 @@ describe("buildEquityMarkets — collateral token info", () => {
       const info = m.collateralToken.info;
 
       expect(info.category).toBe(TokenCategory.Stocks);
+      // Chainlink RH<stock>/USD: the share's traded price, curated as "market" in oracleTypes.json.
+      expect(m.oracleType).toBe("market");
       expect(info.project).toBe(v.stock.name);
       expect(info.underlyingCollateral).toBe(v.stock.underlying);
       expect(info.tradingViewSymbol).toBe(v.stock.tradingViewSymbol);
