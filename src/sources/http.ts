@@ -17,6 +17,12 @@ export class UpstreamError extends Error {
 }
 
 const DEFAULT_TIMEOUT_MS = 15_000;
+// Base delay before the 2nd attempt; each further attempt doubles it (500ms, 1s, 2s, …). An
+// upstream that just answered 5xx/"overloaded" is almost always still failing 0ms later, so an
+// immediate retry only burns the attempt — measured live on KyberSwap's Robinhood endpoint.
+const DEFAULT_RETRY_DELAY_MS = 500;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 interface RequestOpts {
   source: string; // upstream label for logs/errors, e.g. "morpho"
@@ -24,6 +30,8 @@ interface RequestOpts {
   headers?: Record<string, string>;
   // number of attempts (>=1). Retries are for transient network/5xx only.
   retries?: number;
+  // base backoff between attempts (exponential); default DEFAULT_RETRY_DELAY_MS.
+  retryDelayMs?: number;
 }
 
 async function doFetch(url: string, init: RequestInit, opts: RequestOpts): Promise<Response> {
@@ -32,6 +40,7 @@ async function doFetch(url: string, init: RequestInit, opts: RequestOpts): Promi
   let lastErr: unknown;
 
   for (let attempt = 1; attempt <= attempts; attempt++) {
+    if (attempt > 1) await sleep((opts.retryDelayMs ?? DEFAULT_RETRY_DELAY_MS) * 2 ** (attempt - 2));
     const ac = new AbortController();
     const timer = setTimeout(() => ac.abort(), timeoutMs);
     const startedAt = Date.now();

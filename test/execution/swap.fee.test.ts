@@ -6,7 +6,11 @@ import { vi, describe, it, expect, beforeEach } from "vitest";
 
 // NOTE: vi.mock factories are hoisted above module scope — the fee literal must be inlined here.
 vi.mock("../../src/config/env.ts", () => ({ env: { FEE_RECEIVER: "0x9ced716f16651b69D5167C82003690621e8F90b9" } }));
-vi.mock("../../src/sources/http.ts", () => ({ getJson: vi.fn(), postJson: vi.fn() }));
+vi.mock("../../src/sources/http.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/sources/http.ts")>()),
+  getJson: vi.fn(),
+  postJson: vi.fn(),
+}));
 
 const FEE = "0x9ced716f16651b69D5167C82003690621e8F90b9";
 

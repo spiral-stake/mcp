@@ -8,7 +8,7 @@
 // winning venue (KyberSwap/OpenOcean/Pendle), surfaced in the partner build meta. Price impact is NOT
 // returned here: each venue reports it in its own (unreliable) convention, so callers derive it from
 // the app's own token prices instead — one formula for every venue.
-import { getJson, postJson } from "../sources/http.ts";
+import { getJson, postJson, UpstreamError } from "../sources/http.ts";
 import { getMainnetClient } from "../sources/onchain.ts";
 import { captureError } from "../config/sentry.ts";
 import { env } from "../config/env.ts";
@@ -25,6 +25,12 @@ const OPENOCEAN_CHAIN_CODE: Record<number, string> = { 1: "eth" };
 // via FlashLeverage.setSwapRouter. Constant across chains. Any other 'to' is rejected before returning.
 const OPENOCEAN_ROUTER = "0x6352a56caadC4F1E25CD6c75970Fa768A3304e64";
 const NATIVE_ADDRESS = "0x0000000000000000000000000000000000000000";
+// KyberSwap's Robinhood endpoint intermittently answers 503 (code 50301 "service temporarily
+// overloaded") — measured 2026-09-24 at 11 of 12 back-to-back quotes while mainnet was clean. A
+// single attempt therefore failed most opens on chain 4663. Attempts are spaced by the http
+// client's exponential backoff (500ms, 1s, 2s); a still-failing upstream is reported as transient
+// (see kyberUnavailable) so an agent knows to retry rather than treat the strategy as broken.
+const KYBER_ATTEMPTS = 4;
 const NATIVE_KYBER = "0x" + "e".repeat(40); // KyberSwap/OpenOcean native-token placeholder (0xeee…eee)
 
 // Referral fee taken by the aggregator on the swap input (chargeFeeBy: "currency_in"), in bps.
@@ -276,22 +282,27 @@ async function callKyberswap(
     q.set("feeReceiver", feeReceiver);
     q.set("feeAmount", String(feeBps)); // bps on currency_in (KyberSwap takes no cut → protocol nets feeBps)
   }
-  const routes = await getJson<KyberRoutes>(`${KYBERSWAP_URL}/${chainName}/api/v1/routes?${q}`, {
-    source: "kyberswap-routes",
-    retries: 1,
-    timeoutMs: 20_000,
-  });
-  // The build endpoint wants the inner route object (routeSummary + route) at the TOP level — the
-  // app destructures `body.data` before spreading it, so we spread routes.data, not the envelope.
-  const routeData = routes?.data;
+  let res: KyberBuilt | undefined;
+  try {
+    const routes = await getJson<KyberRoutes>(`${KYBERSWAP_URL}/${chainName}/api/v1/routes?${q}`, {
+      source: "kyberswap-routes",
+      retries: KYBER_ATTEMPTS,
+      timeoutMs: 20_000,
+    });
+    // The build endpoint wants the inner route object (routeSummary + route) at the TOP level — the
+    // app destructures `body.data` before spreading it, so we spread routes.data, not the envelope.
+    const routeData = routes?.data;
 
-  // slippage is a ratio (0.01 = 1%); KyberSwap wants bps-of-bps (× 10000): 0.01 → 100.
-  const built = await postJson<{ data?: KyberBuilt }>(
-    `${KYBERSWAP_URL}/${chainName}/api/v1/route/build`,
-    { ...routeData, sender: receiver, recipient: receiver, slippageTolerance: slippage * 10000 },
-    { source: "kyberswap-build", retries: 1, timeoutMs: 20_000 },
-  );
-  const res = built?.data;
+    // slippage is a ratio (0.01 = 1%); KyberSwap wants bps-of-bps (× 10000): 0.01 → 100.
+    const built = await postJson<{ data?: KyberBuilt }>(
+      `${KYBERSWAP_URL}/${chainName}/api/v1/route/build`,
+      { ...routeData, sender: receiver, recipient: receiver, slippageTolerance: slippage * 10000 },
+      { source: "kyberswap-build", retries: KYBER_ATTEMPTS, timeoutMs: 20_000 },
+    );
+    res = built?.data;
+  } catch (e) {
+    throw kyberUnavailable(e, chainName);
+  }
   if (!res?.routerAddress || !res?.data || res.amountOut == null) {
     throw new Error("KyberSwap route/build returned no calldata");
   }
@@ -300,6 +311,19 @@ async function callKyberswap(
     amountOut: BigInt(res.amountOut),
     source: "KyberSwap",
   };
+}
+
+// A 5xx that survived every attempt is the aggregator being down/overloaded, not a property of the
+// strategy or the size: say so, and say it is transient. Anything else (4xx "route not found",
+// malformed reply) passes through unchanged.
+function kyberUnavailable(e: unknown, chainName: string): unknown {
+  if (e instanceof UpstreamError && (e.status ?? 0) >= 500) {
+    return new Error(
+      `KyberSwap (${chainName}) is temporarily unavailable: HTTP ${e.status} from ${e.source} on all ` +
+        `${KYBER_ATTEMPTS} attempts. This is transient — retry in a few seconds.`,
+    );
+  }
+  return e;
 }
 
 interface PendleRoute {
