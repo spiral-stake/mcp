@@ -208,6 +208,7 @@ export function openApiSpec() {
     properties: {
       strategyId: { type: "string", description: "The vault's id ('equity-0x…')." },
       userAddress: { type: "string", description: "Wallet that owns the vault and will sign." },
+      yieldPositionIds: { type: "array", items: { type: "integer" }, description: "The yield loop id(s) to close with the stock leg. Optional when the vault's yieldLoopMatch is unambiguous; required when it is 'ambiguous'. Nothing outside this list is closed." },
       slippage: { type: "number", description: "Ratio, default 0.01, capped at 0.01." },
       chainId: { type: "integer", enum: [4663] },
     },

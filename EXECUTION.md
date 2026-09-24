@@ -104,9 +104,19 @@ of its value is borrowed back and flash-looped into the vault's yield market at 
 - **Fail-closed.** No stock-market borrow liquidity, a yield flash loan above the yield market's direct
   liquidity (equityEntry has no reallocation path), stale market data, a debt-free stock leg on exit
   (the router flash-loans the debt), or an unknown/ineligible vault all refuse before quoting.
+- **Which loops are a vault's.** `equityPositions[].yieldLoopMatch` says how: `tagged` (the app's
+  dashboard row recorded the loop for this vault at open — the primary signal, read from
+  `DASHBOARD_URL/leverage/:user`), `basis` (exactly one untagged open loop whose deposit basis lies in
+  (0.85, 1.02] × the stock debt), `mixed`, `ambiguous` (more than one loop fits — **nothing is
+  claimed**, the candidates are listed in `ambiguousYieldLoopIds` and stay in `positions`), or `none`.
+  Basis matching is a heuristic and is never acted on when ambiguous.
+- **Exit closes only the vault's own loops.** `build_equity_exit_tx` closes the unambiguously
+  attributed loop(s), or exactly the ones passed in `yieldPositionIds` (each validated as the wallet's
+  open loop on the vault's yield market); it refuses an ambiguous vault without them. The ids closed
+  are always in `meta.closedYieldPositionIds`.
 - **A vault's yield loop is never managed alone.** `build_manage_tx` refuses every action on a loop
-  that `equityPositions` attributes to a vault (matched on chain by its deposit basis ≈ the stock
-  debt), pointing at `build_equity_exit_tx` — closing it alone strands the stock leg with its debt.
+  that `equityPositions` attributes to a vault — and on one it *might* attribute (ambiguous) —
+  pointing at `build_equity_exit_tx`: closing it alone strands the stock leg with its debt.
 
 ## Unsigned-tx response contract
 

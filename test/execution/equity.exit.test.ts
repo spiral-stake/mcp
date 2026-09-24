@@ -15,6 +15,11 @@ vi.mock("../../src/execution/swap.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/execution/swap.ts")>()),
   getSwapData: vi.fn(),
 }));
+// The dashboard's per-user rows (open-time vault tags). Default: no rows.
+vi.mock("../../src/sources/http.ts", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../src/sources/http.ts")>()),
+  getJson: vi.fn(async () => []),
+}));
 
 import { rawStore } from "../../src/cache/store.ts";
 import { KEYS } from "../../src/cache/policy.ts";
@@ -22,6 +27,7 @@ import { readMarkets, readAddresses } from "../../src/data/markets.ts";
 import { equityVaultsFor } from "../../src/data/equityVaults.ts";
 import { composeSnapshot } from "../../src/core/compose.ts";
 import { getClient } from "../../src/sources/onchain.ts";
+import { getJson } from "../../src/sources/http.ts";
 import { getSwapData } from "../../src/execution/swap.ts";
 import { getUserEquityPositions, buildEquityExitTx, matchVaultYieldLoops, assertNotVaultYieldLeg, EQUITY_ROUTER_ABI, MORPHO_AUTH_ABI } from "../../src/execution/equity.ts";
 
@@ -48,16 +54,20 @@ function seed() {
 // standalone syrupUSDG loop (basis 1,000). Stock leg: 49.5 SPY collateral, 4,960 USDG debt (accrued).
 const STOCK_COLLATERAL = 49_500_000_000_000_000_000n;
 const STOCK_DEBT = 4_960_000_000n;
-function mockChain(over: { stockDebt?: bigint; stockCollateral?: bigint } = {}) {
+const PROXY2 = "0x3333333333333333333333333333333333333332";
+// Loop 2 (optional): an UNRELATED syrupUSDG loop whose basis (4,900) also lands in the vault's window.
+function mockChain(over: { stockDebt?: bigint; stockCollateral?: bigint; withLookalike?: boolean } = {}) {
   const yieldId = spy().yieldMarketId;
   const loops = [
     { open: true, marketId: yieldId, userProxy: PROXY0, amountDepositedInLoanToken: 4_950_000_000n, amountReturnedInLoanToken: 0n },
     { open: true, marketId: yieldId, userProxy: PROXY1, amountDepositedInLoanToken: 1_000_000_000n, amountReturnedInLoanToken: 0n },
+    ...(over.withLookalike ? [{ open: true, marketId: yieldId, userProxy: PROXY2, amountDepositedInLoanToken: 4_900_000_000n, amountReturnedInLoanToken: 0n }] : []),
   ];
   const morphoPos = (args: any[]) => {
     const who = String(args[0]).toLowerCase();
     if (who === PROXY0.toLowerCase()) return { supplyShares: 0n, borrowShares: 10n, collateral: 49_500_000_000n }; // 49,500 syrupUSDG
     if (who === PROXY1.toLowerCase()) return { supplyShares: 0n, borrowShares: 20n, collateral: 10_000_000_000n };
+    if (who === PROXY2.toLowerCase()) return { supplyShares: 0n, borrowShares: 30n, collateral: 49_000_000_000n };
     // the user directly = a stock leg; only the SPY market has one
     const coll = String(args[1].collateralToken).toLowerCase() === spy().stock.address.toLowerCase() ? (over.stockCollateral ?? STOCK_COLLATERAL) : 0n;
     return { supplyShares: 0n, borrowShares: coll > 0n ? 1n : 0n, collateral: coll };
@@ -66,6 +76,7 @@ function mockChain(over: { stockDebt?: bigint; stockCollateral?: bigint } = {}) 
     const shares = BigInt(args[1]);
     if (shares === 10n) return 44_550_000_000n; // loop 0 debt
     if (shares === 20n) return 9_000_000_000n; // loop 1 debt
+    if (shares === 30n) return 44_100_000_000n; // loop 2 debt
     if (shares === 1n) return over.stockDebt ?? STOCK_DEBT;
     return 0n;
   };
@@ -87,17 +98,34 @@ function mockChain(over: { stockDebt?: bigint; stockCollateral?: bigint } = {}) 
 beforeEach(() => {
   vi.mocked(getClient).mockReset();
   vi.mocked(getSwapData).mockReset();
+  vi.mocked(getJson).mockReset().mockResolvedValue([]);
   seed();
   mockChain();
 });
 
 describe("matchVaultYieldLoops", () => {
   const L = (basis: string) => ({ amountDepositedInLoanToken: basis });
-  it("picks the loop (or subset) whose basis sits in (0.85, 1.02] × the stock debt, closest to it", () => {
-    expect(matchVaultYieldLoops([L("4950"), L("1000")], BigNumber(4960))).toEqual([L("4950")]);
-    expect(matchVaultYieldLoops([L("2000"), L("2950"), L("100")], BigNumber(4960))).toEqual([L("2000"), L("2950")]); // stacked opens
-    expect(matchVaultYieldLoops([L("1000")], BigNumber(4960))).toEqual([]); // nothing plausible
-    expect(matchVaultYieldLoops([L("6000")], BigNumber(4960))).toEqual([]); // a basis can't exceed its borrow
+  it("claims the ONE loop (or subset) whose basis sits in (0.85, 1.02] × the stock debt", () => {
+    expect(matchVaultYieldLoops([L("4950"), L("1000")], BigNumber(4960))).toEqual({ loops: [L("4950")], match: "basis", ambiguous: [] });
+    expect(matchVaultYieldLoops([L("2000"), L("2950"), L("100")], BigNumber(4960))).toEqual({ loops: [L("2000"), L("2950")], match: "basis", ambiguous: [] }); // stacked opens
+    expect(matchVaultYieldLoops([L("1000")], BigNumber(4960))).toEqual({ loops: [], match: "none", ambiguous: [] }); // nothing plausible
+    expect(matchVaultYieldLoops([L("6000")], BigNumber(4960))).toEqual({ loops: [], match: "none", ambiguous: [] }); // a basis can't exceed its borrow
+  });
+  it("claims NOTHING when more than one loop could be the leg — reports them as ambiguous", () => {
+    const a = L("4950"), b = L("4900");
+    expect(matchVaultYieldLoops([a, b, L("1000")], BigNumber(4960))).toEqual({ loops: [], match: "ambiguous", ambiguous: [a, b] });
+  });
+  it("does not let a dust loop riding along with a real match make it ambiguous", () => {
+    // {2000, 2950} explains the debt; {2000, 2950, 100} also fits the window but needs nothing the
+    // smaller subset lacks — only the minimal explanation counts, and it is unique.
+    expect(matchVaultYieldLoops([L("2000"), L("2950"), L("100")], BigNumber(4960))).toEqual({ loops: [L("2000"), L("2950")], match: "basis", ambiguous: [] });
+  });
+  it("takes tagged loops outright and only basis-matches the residual", () => {
+    const tagged = L("4950");
+    expect(matchVaultYieldLoops([tagged, L("4900")], BigNumber(4960), [tagged])).toEqual({ loops: [tagged], match: "tagged", ambiguous: [] });
+    // tagged loop covers only part of the debt → the rest is basis-matched (stacked open before tags existed)
+    const t2 = L("2000");
+    expect(matchVaultYieldLoops([t2, L("2950"), L("100")], BigNumber(4960), [t2])).toEqual({ loops: [t2, L("2950")], match: "mixed", ambiguous: [] });
   });
 });
 
@@ -109,12 +137,47 @@ describe("getUserEquityPositions", () => {
     expect(v.strategyId).toBe(spy().id);
     expect(v.curator).toBe("Longbow");
     expect(v.yieldLoops.map((l) => l.id)).toEqual([0]);
+    expect(v.yieldLoopMatch).toBe("basis");
+    expect(v).not.toHaveProperty("ambiguousYieldLoopIds");
     expect(positions.map((p) => p.id)).toEqual([1]);
     // stock leg: 49.5 SPY × $200 = $9,900 collateral, 4,960 debt → 50.10% LTV, liquidates at $200 × 50.10/62.5
     expect(v.stock).toMatchObject({ symbol: "SPY", collateral: "49.500000", collateralUsd: "9900.00", debtUsdg: "4960.000000", ltvPct: "50.10", liquidationLtvPct: "62.50", ltvHeadroomPct: "12.40" });
     expect(v.stock.liquidationPriceUsd).toBe(BigNumber(200).multipliedBy(BigNumber(4960).div(9900)).div(0.625).toFixed(4)); // unrounded LTV
     // net value = stock equity (9,900 − 4,960) + loop 0 equity (49,500 − 44,550)
     expect(v.netValueUsd).toBe("9890.00");
+  });
+
+  it("claims nothing when a look-alike loop also fits the window: ambiguous, candidates stay in the plain list", async () => {
+    mockChain({ withLookalike: true });
+    const { equityPositions, positions } = await getUserEquityPositions(CHAIN, USER);
+    expect(equityPositions).toHaveLength(1);
+    expect(equityPositions[0].yieldLoopMatch).toBe("ambiguous");
+    expect(equityPositions[0].yieldLoops).toEqual([]);
+    expect(equityPositions[0].ambiguousYieldLoopIds!.sort()).toEqual([0, 2]);
+    expect(positions.map((p) => p.id).sort()).toEqual([0, 1, 2]);
+  });
+
+  it("uses the app's open-time tag as the primary signal, and never claims a loop tagged for another vault", async () => {
+    mockChain({ withLookalike: true });
+    const yieldId = spy().yieldMarketId;
+    // The dashboard says loop 2 is the SPY vault's leg (and loop 0 belongs to NetNet's NVDA vault).
+    vi.mocked(getJson).mockResolvedValue([
+      { positionId: `${yieldId}-2`, equityMarketId: spy().id.toUpperCase() },
+      { positionId: `${yieldId}-0`, equityMarketId: "equity-0x8b16891f032a93b771347c9cb470a780e6699dd701553d3402aa3cdba6189c3e" },
+    ]);
+    const { equityPositions, positions } = await getUserEquityPositions(CHAIN, USER);
+    const v = equityPositions.find((p) => p.strategyId === spy().id)!;
+    expect(v.yieldLoopMatch).toBe("tagged");
+    expect(v.yieldLoops.map((l) => l.id)).toEqual([2]);
+    expect(positions.map((p) => p.id).sort()).toEqual([0, 1]);
+    expect(vi.mocked(getJson).mock.calls[0][0]).toBe(`https://dashboard.spiralstake.xyz/leverage/${USER}?chainId=${CHAIN}`);
+  });
+
+  it("degrades to basis matching (never a wrong claim) when the dashboard is down", async () => {
+    vi.mocked(getJson).mockRejectedValue(new Error("HTTP 503 from dashboard"));
+    const { equityPositions } = await getUserEquityPositions(CHAIN, USER);
+    expect(equityPositions[0].yieldLoopMatch).toBe("basis");
+    expect(equityPositions[0].yieldLoops.map((l) => l.id)).toEqual([0]);
   });
 
   it("leaves every loop in the plain list when no vault stock leg is open", async () => {
@@ -132,6 +195,11 @@ describe("assertNotVaultYieldLeg (build_manage_tx guard)", () => {
   });
   it("allows a standalone loop on the same market", async () => {
     await expect(assertNotVaultYieldLeg(CHAIN, USER, 1, yieldMarket())).resolves.toBeUndefined();
+  });
+  it("refuses a loop that MIGHT be the leg (ambiguous) — fail closed, and says how to resolve it", async () => {
+    mockChain({ withLookalike: true });
+    await expect(assertNotVaultYieldLeg(CHAIN, USER, 2, yieldMarket())).rejects.toThrow(/may be the yield leg of your SPY equity vault.*loops 0, 2.*yieldPositionIds/s);
+    await expect(assertNotVaultYieldLeg(CHAIN, USER, 1, yieldMarket())).resolves.toBeUndefined(); // not a candidate
   });
   it("never reads chain for a market no vault deploys into", async () => {
     const other = composeSnapshot(CHAIN).markets.map((m) => m.market).find((m) => m.collateralToken.symbol === "spUSDG")!;
@@ -180,8 +248,27 @@ describe("buildEquityExitTx", () => {
     expect([quotes[1][2], quotes[1][5], quotes[1][7]]).toEqual([equityRouterAddress, STOCK_COLLATERAL, 0]);
 
     expect(bundle.meta.closedYieldPositionIds).toEqual([0]);
+    expect(bundle.meta.yieldLoopSelection).toBe("basis");
     // ≈ (9,900 − 4,960) stock + (49,500 − 44,550) loop
     expect(bundle.meta.estimatedUsdgOut).toBe("9890.00");
+  });
+
+  it("refuses an ambiguous vault without yieldPositionIds, and closes exactly the named loop with them", async () => {
+    mockChain({ withLookalike: true });
+    await expect(buildEquityExitTx({ chainId: CHAIN, strategyId: spy().id, userAddress: USER })).rejects.toThrow(/Cannot tell which of your syrupUSDG loops \(ids 0, 2\).*yieldPositionIds/s);
+    mockChain({ withLookalike: true });
+    const bundle = await buildEquityExitTx({ chainId: CHAIN, strategyId: spy().id, userAddress: USER, yieldPositionIds: [2] });
+    expect(bundle.meta.closedYieldPositionIds).toEqual([2]);
+    expect(bundle.meta.yieldLoopSelection).toBe("explicit");
+    expect(bundle.calls).toHaveLength(4); // one deleverage + authorize + equityExit + revoke
+    const quotes = vi.mocked(getSwapData).mock.calls;
+    expect(quotes[0][5]).toBe(49_000_000_000n); // loop 2's exact collateral, not loop 0's
+  });
+
+  it("validates explicit yieldPositionIds: must be this wallet's open loop on the vault's yield market", async () => {
+    await expect(buildEquityExitTx({ chainId: CHAIN, strategyId: spy().id, userAddress: USER, yieldPositionIds: [99] })).rejects.toThrow(/position 99 is not an open loop/);
+    mockChain();
+    await expect(buildEquityExitTx({ chainId: CHAIN, strategyId: spy().id, userAddress: USER, yieldPositionIds: [] })).rejects.toThrow(/at least one/);
   });
 
   it("refuses a debt-free stock leg (equityExit flash-loans the debt) and a wallet with no vault", async () => {

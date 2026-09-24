@@ -29,6 +29,9 @@ import { isAgentEligible } from "../core/strategy.ts";
 import { assertMarketDataFresh } from "../core/freshness.ts";
 import { readAddresses } from "../data/markets.ts";
 import { getClient } from "../sources/onchain.ts";
+import { getJson } from "../sources/http.ts";
+import { env } from "../config/env.ts";
+import { log } from "../config/logger.ts";
 import { getSwapData, SWAP_FEE_BPS, NON_CORRELATED_SWAP_FEE_BPS, type SwapSource } from "./swap.ts";
 import { buildApproveCalls, type Call } from "./approve.ts";
 import { openSigningUrl, portfolioSigningUrl } from "./appLink.ts";
@@ -483,38 +486,75 @@ export async function buildEquityDepositTx(input: BuildEquityDepositInput): Prom
 }
 
 // ── positions ─────────────────────────────────────────────────────────────────────────────────────
-// Which of a user's open loops on a vault's yield market are that vault's yield leg(s). The app also
-// consults its dashboard rows (tagged at open); here every loop is matched on chain facts alone: a
-// vault's loop was funded by the USDG the stock leg borrowed for it, so its on-chain deposit basis
-// lies in (debt × BASIS_MATCH_MIN, debt × BASIS_MATCH_MAX] — the debt only grows from the borrow.
-// Stacked opens on one vault share a single stock leg, so the match is on the SUM of the claimed
-// bases (subsets up to MAX_SUBSET_CANDIDATES loops; past that, single loops only).
+// Which of a user's open loops on a vault's yield market are that vault's yield leg(s). Two signals,
+// as in the app's utils/equityPosition.ts:
+//   1. TAGS — the dashboard row the app writes at open carries `equityMarketId`. A loop tagged for
+//      THIS vault is its leg outright; one tagged for ANOTHER vault is never a candidate. (Loops the
+//      MCP's own deposit tool opened carry no tag: the MCP never writes to the dashboard.)
+//   2. BASIS — an untagged loop was funded by the USDG the stock leg borrowed for it, so its on-chain
+//      deposit basis lies in (residual debt × BASIS_MATCH_MIN, × BASIS_MATCH_MAX] — the debt only grows
+//      from the borrow. Stacked opens on one vault share a single stock leg, so the match is on the SUM
+//      of the claimed bases (subsets up to MAX_SUBSET_CANDIDATES loops; past that, single loops only).
+// Basis is a heuristic: an unrelated loop whose basis happens to land in the window would otherwise
+// be swept into a vault exit. So it is only trusted when EXACTLY ONE subset fits; more than one is
+// reported as ambiguous and nothing is claimed — the exit then needs the loops named explicitly.
 const BASIS_MATCH_MIN = 0.85; // ≈ 3 years of borrow interest at 5%
 const BASIS_MATCH_MAX = 1.02; // rounding / oracle headroom — a basis can't really exceed its borrow
 const MAX_SUBSET_CANDIDATES = 10;
 
-export function matchVaultYieldLoops<T extends { amountDepositedInLoanToken: string }>(candidates: T[], stockDebtUsdg: BigNumber): T[] {
-  if (candidates.length === 0 || stockDebtUsdg.lte(0)) return [];
+export type YieldLoopMatch = "tagged" | "basis" | "mixed" | "ambiguous" | "none";
+
+export function matchVaultYieldLoops<T extends { amountDepositedInLoanToken: string }>(
+  candidates: T[],
+  stockDebtUsdg: BigNumber,
+  tagged: T[] = [],
+): { loops: T[]; match: YieldLoopMatch; ambiguous: T[] } {
   const sumBasis = (loops: T[]) => loops.reduce((t, p) => t.plus(p.amountDepositedInLoanToken), BigNumber(0));
-  const lo = stockDebtUsdg.multipliedBy(BASIS_MATCH_MIN);
-  const hi = stockDebtUsdg.multipliedBy(BASIS_MATCH_MAX);
-  let best: T[] = [];
-  let bestGap: BigNumber | undefined;
+  const untagged = candidates.filter((c) => !tagged.includes(c));
+  const residual = stockDebtUsdg.minus(sumBasis(tagged));
+  // The tagged loops already account for the debt (within the interest band) — nothing else is ours.
+  if (untagged.length === 0 || residual.lte(stockDebtUsdg.multipliedBy(1 - BASIS_MATCH_MIN))) {
+    return { loops: tagged, match: tagged.length > 0 ? "tagged" : "none", ambiguous: [] };
+  }
+  const lo = residual.multipliedBy(BASIS_MATCH_MIN);
+  const hi = residual.multipliedBy(BASIS_MATCH_MAX);
+  const fits: T[][] = [];
   const consider = (subset: T[]) => {
     const basis = sumBasis(subset);
-    if (basis.lte(lo) || basis.gt(hi)) return;
-    const gap = stockDebtUsdg.minus(basis).abs();
-    if (bestGap === undefined || gap.lt(bestGap)) {
-      best = subset;
-      bestGap = gap;
-    }
+    if (basis.gt(lo) && basis.lte(hi)) fits.push(subset);
   };
-  if (candidates.length <= MAX_SUBSET_CANDIDATES) {
-    for (let mask = 1; mask < 1 << candidates.length; mask++) consider(candidates.filter((_, i) => mask & (1 << i)));
+  if (untagged.length <= MAX_SUBSET_CANDIDATES) {
+    for (let mask = 1; mask < 1 << untagged.length; mask++) consider(untagged.filter((_, i) => mask & (1 << i)));
   } else {
-    candidates.forEach((p) => consider([p]));
+    untagged.forEach((p) => consider([p]));
   }
-  return best;
+  // A loop is claimed only if it is NEEDED to explain the debt: a fit that still fits after dropping
+  // one of its loops (a dust loop riding along with a real match) is not a distinct explanation.
+  const minimal = fits.filter((f) => !fits.some((g) => g.length < f.length && g.every((x) => f.includes(x))));
+  if (minimal.length === 0) return { loops: tagged, match: tagged.length > 0 ? "tagged" : "none", ambiguous: [] };
+  if (minimal.length > 1) {
+    const ambiguous = [...new Set(minimal.flat())];
+    return { loops: tagged, match: "ambiguous", ambiguous };
+  }
+  return { loops: [...tagged, ...minimal[0]], match: tagged.length > 0 ? "mixed" : "basis", ambiguous: [] };
+}
+
+// The dashboard's per-user rows: positionId (`${yieldMarketId}-${index}`) → equityMarketId, for
+// rows the app tagged at open. Best-effort: the dashboard being down degrades to basis matching
+// (which then fails closed on ambiguity), never to a wrong claim.
+async function fetchVaultTags(chainId: number, user: string): Promise<Map<string, string>> {
+  const tags = new Map<string, string>();
+  if (!env.DASHBOARD_URL) return tags;
+  try {
+    const rows = await getJson<Array<{ positionId?: string; equityMarketId?: string }>>(
+      `${env.DASHBOARD_URL}/leverage/${user.toLowerCase()}?chainId=${chainId}`,
+      { source: "dashboard", retries: 2 },
+    );
+    for (const r of rows ?? []) if (r.positionId && r.equityMarketId) tags.set(r.positionId.toLowerCase(), r.equityMarketId.toLowerCase());
+  } catch (e) {
+    log.warn("dashboard position tags unavailable — vault legs matched on basis only", { chainId, user, error: e instanceof Error ? e.message : String(e) });
+  }
+  return tags;
 }
 
 export interface EquityPositionView {
@@ -536,6 +576,15 @@ export interface EquityPositionView {
   };
   /** The vault's yield loop(s) — plain Spiral positions, claimed by this vault (excluded from `positions`). */
   yieldLoops: LeveragePositionView[];
+  /**
+   * How the yield loop(s) were attributed: "tagged" (the app recorded them for this vault at open),
+   * "basis" (the one open loop whose deposit basis matches the stock debt), "mixed" (both),
+   * "ambiguous" (more than one loop could be the leg — nothing claimed, see ambiguousYieldLoopIds;
+   * build_equity_exit_tx then needs `yieldPositionIds`), or "none" (stock leg with no matching loop).
+   */
+  yieldLoopMatch: YieldLoopMatch;
+  /** Present only when ambiguous: the loop ids that could each be this vault's leg. They stay in `positions`. */
+  ambiguousYieldLoopIds?: number[];
   netValueUsd: string; // (stock collateral − stock debt) + Σ yield-loop equity
   currentNetApyPct: string; // at the CURRENT stock LTV: ltv × (yieldLegApy − stockBorrowApy)
 }
@@ -545,10 +594,20 @@ export async function getUserEquityPositions(
   chainId: number,
   user: string,
 ): Promise<{ equityPositions: EquityPositionView[]; positions: LeveragePositionView[] }> {
+  const { equityPositions, positions } = await resolveUserEquity(chainId, user);
+  return { equityPositions, positions };
+}
+
+async function resolveUserEquity(
+  chainId: number,
+  user: string,
+): Promise<{ equityPositions: EquityPositionView[]; positions: LeveragePositionView[]; allPositions: LeveragePositionView[] }> {
   const positions = await getUserPositions(chainId, user);
   const loops = composeSnapshot(chainId).markets.map((m) => m.market);
   const vaults = buildEquityMarkets(chainId, loops);
-  if (vaults.length === 0) return { equityPositions: [], positions };
+  if (vaults.length === 0) return { equityPositions: [], positions, allPositions: positions };
+  const tags = await fetchVaultTags(chainId, user);
+  const tagOf = (p: LeveragePositionView) => tags.get(`${p.strategyId}-${p.id}`.toLowerCase());
 
   const flashLeverageAddress = readAddresses(chainId).flashLeverageAddress as `0x${string}`;
   const client = getClient(chainId);
@@ -582,11 +641,18 @@ export async function getUserEquityPositions(
     const debtUsd = debtUsdg.multipliedBy(usdg.valueInUsd);
     const ltv = collateralUsd.isZero() ? BigNumber(0) : debtUsd.div(collateralUsd).multipliedBy(100);
 
+    const vaultId = equityMarket.morphoMarketId.toLowerCase();
+    // Open loops on this vault's yield market not already claimed, and not tagged for a DIFFERENT vault.
     const candidates = positions.filter(
-      (p) => p.open && !p.liquidated && !claimed.has(p.id) && p.strategyId.toLowerCase() === ev.yieldMarketId.toLowerCase(),
+      (p) =>
+        p.open &&
+        !p.liquidated &&
+        !claimed.has(p.id) &&
+        p.strategyId.toLowerCase() === ev.yieldMarketId.toLowerCase() &&
+        (tagOf(p) === undefined || tagOf(p) === vaultId),
     );
-    const yieldLoops = matchVaultYieldLoops(candidates, debtUsdg);
-    if (yieldLoops.length === 0) return; // stock leg with no matching yield loop — leave the loops in the list
+    const tagged = candidates.filter((p) => tagOf(p) === vaultId);
+    const { loops: yieldLoops, match, ambiguous } = matchVaultYieldLoops(candidates, debtUsdg, tagged);
     yieldLoops.forEach((p) => claimed.add(p.id));
 
     const loopsEquityUsd = yieldLoops.reduce((t, p) => t.plus(p.netValueUsd), BigNumber(0));
@@ -608,12 +674,14 @@ export async function getUserEquityPositions(
         borrowApyPct: ev.stockBorrowApyPct,
       },
       yieldLoops,
+      yieldLoopMatch: match,
+      ...(ambiguous.length > 0 ? { ambiguousYieldLoopIds: ambiguous.map((p) => p.id).sort((a, b) => a - b) } : {}),
       netValueUsd: collateralUsd.minus(debtUsd).plus(loopsEquityUsd).toFixed(2),
       currentNetApyPct: ltv.div(100).multipliedBy(BigNumber(ev.yieldLegApyPct).minus(ev.stockBorrowApyPct)).toFixed(2),
     });
   });
 
-  return { equityPositions, positions: positions.filter((p) => !claimed.has(p.id)) };
+  return { equityPositions, positions: positions.filter((p) => !claimed.has(p.id)), allPositions: positions };
 }
 
 // ── exit ──────────────────────────────────────────────────────────────────────────────────────────
@@ -622,6 +690,13 @@ export interface BuildEquityExitInput {
   userAddress: string;
   strategyId: string; // the vault's id
   slippage?: number; // ratio, default 0.01, capped at 0.01
+  /**
+   * The yield loop(s) to close with the stock leg, by on-chain position id. Optional when
+   * get_positions attributes the vault's loops unambiguously (yieldLoopMatch tagged/basis/mixed);
+   * REQUIRED when it reports "ambiguous". Each must be an open loop of this wallet on the vault's
+   * yield market. Nothing outside this list is ever closed.
+   */
+  yieldPositionIds?: number[];
 }
 
 export async function buildEquityExitTx(input: BuildEquityExitInput): Promise<EquityCallBundle> {
@@ -633,14 +708,43 @@ export async function buildEquityExitTx(input: BuildEquityExitInput): Promise<Eq
   const stock = equityMarket.collateralToken;
   const yieldCollateral = yieldMarket.collateralToken;
 
-  const { equityPositions } = await getUserEquityPositions(chainId, userAddress);
-  const pos = equityPositions.find((p) => p.strategyId.toLowerCase() === input.strategyId.toLowerCase());
-  if (!pos) throw new Error(`No open ${stock.symbol} equity vault for ${userAddress} on chain ${chainId}`);
-  const debtRaw = parseUnits(pos.stock.debtUsdg, usdg.decimals);
+  const { equityPositions, allPositions } = await resolveUserEquity(chainId, userAddress);
+  const found = equityPositions.find((p) => p.strategyId.toLowerCase() === input.strategyId.toLowerCase());
+  if (!found) throw new Error(`No open ${stock.symbol} equity vault for ${userAddress} on chain ${chainId}`);
+  const debtRaw = parseUnits(found.stock.debtUsdg, usdg.decimals);
   if (debtRaw <= 0n) {
     // equityExit flash-loans the debt, so a debt-free stock leg cannot go through it (NoDebt revert).
     throw new Error(`The ${stock.symbol} stock leg has no debt; withdraw the collateral straight from Morpho instead.`);
   }
+
+  // Which loops close with the stock leg: the caller's explicit list (validated), else the
+  // unambiguous attribution. An ambiguous attribution is never acted on.
+  let yieldLoops: LeveragePositionView[];
+  if (input.yieldPositionIds !== undefined) {
+    const ids = [...new Set(input.yieldPositionIds)];
+    if (ids.length === 0) throw new Error("yieldPositionIds must name at least one yield loop");
+    yieldLoops = ids.map((id) => {
+      const p = allPositions.find((x) => x.id === id);
+      if (!p || !p.open || p.liquidated) throw new Error(`yieldPositionIds: position ${id} is not an open loop of ${userAddress}`);
+      if (p.strategyId.toLowerCase() !== yieldMarket.morphoMarketId.toLowerCase()) {
+        throw new Error(`yieldPositionIds: position ${id} is a ${p.collateralSymbol} loop, not on this vault's yield market (${yieldCollateral.symbol})`);
+      }
+      return p;
+    });
+  } else if (found.yieldLoopMatch === "ambiguous") {
+    throw new Error(
+      `Cannot tell which of your ${yieldCollateral.symbol} loops (ids ${found.ambiguousYieldLoopIds!.join(", ")}) is the ${stock.symbol} vault's ` +
+        `yield leg — each has a deposit basis that could match the stock debt. Pass yieldPositionIds with the loop(s) to close with the stock leg.`,
+    );
+  } else if (found.yieldLoops.length === 0) {
+    throw new Error(
+      `The ${stock.symbol} stock leg is open but no ${yieldCollateral.symbol} loop of ${userAddress} matches its debt. ` +
+        `Pass yieldPositionIds if a loop should be closed with it, or unwind the stock leg from the app.`,
+    );
+  } else {
+    yieldLoops = found.yieldLoops;
+  }
+  const pos = { ...found, yieldLoops };
 
   const calls: Call[] = [];
   const estimated = { loopsOutUsdg: BigNumber(0) };
@@ -696,9 +800,11 @@ export async function buildEquityExitTx(input: BuildEquityExitInput): Promise<Eq
       estimatedUsdgOut: stockOutUsdg.plus(estimated.loopsOutUsdg).toFixed(2),
       slippage,
       expiresAt: new Date(Date.now() + 60_000).toISOString(),
+      yieldLoopSelection: input.yieldPositionIds !== undefined ? "explicit" : found.yieldLoopMatch,
       signingUrl: portfolioSigningUrl(chainId, pos.yieldLoops[0]!.id),
       instructions:
-        `Close the ${stock.symbol} + yield vault (unwind ${pos.yieldLoops.length} yield loop(s), then the stock leg): ` +
+        `Close the ${stock.symbol} + yield vault: unwind yield loop(s) ${pos.yieldLoops.map((l) => l.id).join(", ")} ` +
+        `(selection: ${input.yieldPositionIds !== undefined ? "as you specified" : found.yieldLoopMatch}), then the stock leg. ` +
         `either open meta.signingUrl to review and sign in your own wallet via the Spiral app (recommended), or ${BATCH_INSTRUCTIONS} ` +
         `Non-custodial: built for ${userAddress}; that wallet must sign.`,
     },
@@ -718,10 +824,21 @@ export async function assertNotVaultYieldLeg(chainId: number, user: string, id: 
   if (!isYieldMarket) return;
   const { equityPositions } = await getUserEquityPositions(chainId, user);
   const owner = equityPositions.find((p) => p.yieldLoops.some((l) => l.id === id));
-  if (!owner) return;
-  throw new Error(
-    `Position ${id} is the yield leg of your ${owner.stock.symbol} equity vault (${owner.strategyId}). Managing it alone would ` +
-      `leave the ${owner.stock.symbol} stock leg standing with its ${owner.stock.debtUsdg} USDG debt. Use build_equity_exit_tx to ` +
-      `unwind the whole vault.`,
-  );
+  if (owner) {
+    throw new Error(
+      `Position ${id} is the yield leg of your ${owner.stock.symbol} equity vault (${owner.strategyId}). Managing it alone would ` +
+        `leave the ${owner.stock.symbol} stock leg standing with its ${owner.stock.debtUsdg} USDG debt. Use build_equity_exit_tx to ` +
+        `unwind the whole vault.`,
+    );
+  }
+  // Fail closed on a loop that MIGHT be a vault's leg: closing it alone could strand the stock leg.
+  const maybe = equityPositions.find((p) => p.ambiguousYieldLoopIds?.includes(id));
+  if (maybe) {
+    throw new Error(
+      `Position ${id} may be the yield leg of your ${maybe.stock.symbol} equity vault (${maybe.strategyId}) — loops ` +
+        `${maybe.ambiguousYieldLoopIds!.join(", ")} each have a deposit basis matching its stock debt, and closing the wrong one ` +
+        `alone would strand the stock leg. Unwind the vault with build_equity_exit_tx (naming the vault's loop in yieldPositionIds), ` +
+        `then manage the remaining loop.`,
+    );
+  }
 }

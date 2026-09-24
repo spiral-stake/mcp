@@ -57,6 +57,7 @@ const buildEquityDepositBody = equityDepositBody.extend({ userAddress: evmAddres
 const equityExitBody = z.object({
   strategyId: z.string(),
   userAddress: evmAddress,
+  yieldPositionIds: z.array(z.number().int().nonnegative()).optional(),
   slippage: z.number().positive().optional(),
   chainId,
 });
@@ -79,7 +80,7 @@ async function runBuild<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/unknown strategy|unknown equity vault|not an equity vault|not configured|already closed|not correlated|not currently eligible|is not available|is required|invalid|not above|above the .* cap|must be a positive|too small|no open .* equity vault|yield leg of your/i.test(msg)) {
+    if (/unknown strategy|unknown equity vault|not an equity vault|not configured|already closed|not correlated|not currently eligible|is not available|is required|invalid|not above|above the .* cap|must be a positive|too small|no open .* equity vault|yield leg of your|yieldPositionIds|Cannot tell which|is open but no/i.test(msg)) {
       throw new ApiError("bad_request", msg);
     }
     throw new ApiError("upstream_unavailable", msg);

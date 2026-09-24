@@ -329,10 +329,18 @@ export function buildMcpServer(): McpServer {
         "Build the UNSIGNED call batch to fully unwind an OPEN equity vault (from get_positions.equityPositions): " +
         "close each of its yield loops, then one self-funded router call repays the stock debt, withdraws the stock, " +
         "swaps it to USDG and returns the proceeds. Submit as ONE atomic batch. Non-custodial; the vault's yield loop " +
-        "cannot be closed alone through build_manage_tx.",
+        "cannot be closed alone through build_manage_tx. Only the vault's own loop(s) are closed: those get_positions " +
+        "attributes unambiguously, or exactly the ones you pass in yieldPositionIds. Always read meta.closedYieldPositionIds.",
       inputSchema: {
         strategyId: z.string().describe("The vault's id ('equity-0x…')."),
         userAddress: z.string().describe("Wallet that owns the vault and will sign."),
+        yieldPositionIds: z
+          .array(z.number().int().nonnegative())
+          .optional()
+          .describe(
+            "The yield loop id(s) to close with the stock leg (from get_positions). Optional when the vault's " +
+              "yieldLoopMatch is tagged/basis/mixed; REQUIRED when it is 'ambiguous'. Nothing outside this list is closed.",
+          ),
         slippage: z.number().positive().optional().describe("Swap slippage ratio. Default 0.01, capped at 0.01."),
         chainId: chainIdSchema,
       },
