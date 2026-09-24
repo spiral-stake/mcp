@@ -163,6 +163,11 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
     const currentLeverage = equityInLoan.isZero() ? BigNumber(0) : leveragedInLoan.div(equityInLoan);
     const liquidated = pos.open && amountLeveragedCollateral.isZero();
     const netBorrowApy = BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2);
+    // Effective collateral yield = base APY + collateral-side Merkl incentive, exactly as compose.ts
+    // sizes defaultLeverageApy and strategy.ts sizes the ladder. With the bare base APY a position
+    // contradicted /v1/strategies at the same LTV on every incentive-carrying market (syrupUSDG read
+    // 13% against a 38% ladder; USDe, whose yield is all incentive, read deeply negative).
+    const collateralApy = BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy).toFixed(2);
 
     // Exit health for THIS position: a one-shot close swaps the full leveraged collateral, so the
     // notional to compare against the market's clean-exit depth is the whole position, not equity.
@@ -192,7 +197,7 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
       // Honest signed carry (pass `true`, not market.correlated): a perp reads as its typically-negative
       // financing carry, matching /v1/strategies' leverageApyPct and the simulate preview rather than the
       // app's sign-flipped "Borrow APY" display. Identical for a correlated loop.
-      currentLeverageApyPct: calcLeverageApy(true, market.collateralToken.apy, netBorrowApy, ltv.toFixed(2)),
+      currentLeverageApyPct: calcLeverageApy(true, collateralApy, netBorrowApy, ltv.toFixed(2)),
       exitLiquidity: {
         tier: exitLiquidityTier(info),
         cleanExitSize: exitLiquiditySize(info),
