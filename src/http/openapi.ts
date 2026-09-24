@@ -188,6 +188,53 @@ export function openApiSpec() {
       chainId: { type: "integer", enum: [1, 4663] },
     },
   };
+  const equityDepositBody = {
+    type: "object",
+    required: ["strategyId", "amount"],
+    properties: {
+      strategyId: { type: "string", description: "The vault's id from /v1/strategies (starts with 'equity-')." },
+      amount: { type: "string", description: "Deposit in human units of the vault's deposit token (USDG), e.g. '10000'." },
+      stockLtvPct: { type: "string", description: "Stock-leg LTV percent. Default: the vault's targetLtvPct. Capped at 88% of the stock market's liquidation LTV; above it the request is refused." },
+      slippage: { type: "number", description: "Ratio, default 0.01 (the app's equity setting), capped at 0.01." },
+      chainId: { type: "integer", enum: [4663] },
+    },
+  };
+  const buildEquityDepositBody = {
+    allOf: [equityDepositBody, { type: "object", required: ["userAddress"], properties: { userAddress: { type: "string", description: "Wallet that will sign; the stock leg and yield loop are opened for it." } } }],
+  };
+  const equityExitBody = {
+    type: "object",
+    required: ["strategyId", "userAddress"],
+    properties: {
+      strategyId: { type: "string", description: "The vault's id ('equity-0x…')." },
+      userAddress: { type: "string", description: "Wallet that owns the vault and will sign." },
+      slippage: { type: "number", description: "Ratio, default 0.01, capped at 0.01." },
+      chainId: { type: "integer", enum: [4663] },
+    },
+  };
+  const equityCallBundle = {
+    type: "object",
+    description:
+      "An ORDERED call batch for the user's own wallet, meant to be submitted atomically (EIP-5792 wallet_sendCalls / Safe MultiSend) — the Morpho manager authorization the router needs is granted and revoked inside the batch. A wallet that cannot batch sends the calls in order and must always send the final (revoke) call.",
+    properties: {
+      chainId: { type: "integer" },
+      action: { type: "string", enum: ["equity_deposit", "equity_exit"] },
+      strategyId: { type: "string" },
+      calls: { type: "array", items: call },
+      atomic: { type: "boolean", enum: [true] },
+      meta: {
+        type: "object",
+        properties: {
+          preview: { type: "object", description: "Deposit: the same preview as /equity/simulate. Exit: `position` (the vault being unwound) instead." },
+          slippage: { type: "number" },
+          expiresAt: { type: "string", format: "date-time" },
+          signingUrl: { type: "string" },
+          instructions: { type: "string" },
+        },
+      },
+    },
+    required: ["chainId", "action", "strategyId", "calls", "atomic", "meta"],
+  };
   const buildLeverageBody = {
     allOf: [leverageBody, { type: "object", required: ["userAddress"], properties: { userAddress: { type: "string", description: "Wallet that will sign; approvals + onBehalfOf are built for it." } } }],
   };
@@ -394,16 +441,43 @@ export function openApiSpec() {
           responses: { "200": { description: "Unsigned tx bundle", content: { "application/json": { schema: unsignedTxBundle } } }, ...partnerErr },
         },
       },
+      "/v1/partner/equity/simulate": {
+        post: {
+          tags: ["Partner"],
+          summary: "Preview a stock + yield equity-vault deposit (deterministic, no wallet)",
+          security: bearer,
+          requestBody: { required: true, content: { "application/json": { schema: equityDepositBody } } },
+          responses: { "200": { description: "Deposit preview", content: { "application/json": { schema: { type: "object", properties: { chainId: { type: "integer" }, strategyId: { type: "string" }, action: { type: "string", enum: ["equity_deposit"] }, preview: { type: "object" }, note: { type: "string" } } } } } }, ...partnerErr },
+        },
+      },
+      "/v1/partner/equity/deposit/build": {
+        post: {
+          tags: ["Partner"],
+          summary: "Build the unsigned deposit batch for a stock + yield equity vault",
+          security: bearer,
+          requestBody: { required: true, content: { "application/json": { schema: buildEquityDepositBody } } },
+          responses: { "200": { description: "Unsigned call batch", content: { "application/json": { schema: equityCallBundle } } }, ...partnerErr },
+        },
+      },
+      "/v1/partner/equity/exit/build": {
+        post: {
+          tags: ["Partner"],
+          summary: "Build the unsigned batch that fully unwinds an open equity vault",
+          security: bearer,
+          requestBody: { required: true, content: { "application/json": { schema: equityExitBody } } },
+          responses: { "200": { description: "Unsigned call batch", content: { "application/json": { schema: equityCallBundle } } }, ...partnerErr },
+        },
+      },
       "/v1/partner/positions/{address}": {
         get: {
           tags: ["Partner"],
-          summary: "A wallet's open/closed positions",
+          summary: "A wallet's open/closed positions, plus its open equity vaults (`equityPositions`)",
           security: bearer,
           parameters: [
             { name: "address", in: "path", required: true, schema: { type: "string", pattern: "^0x[0-9a-fA-F]{40}$" }, description: "Wallet address." },
             chainIdQuery,
           ],
-          responses: { "200": { description: "Positions", content: { "application/json": { schema: { type: "object", properties: { chainId: { type: "integer" }, userAddress: { type: "string" }, positions: { type: "array", items: { type: "object" } } } } } } }, ...partnerErr },
+          responses: { "200": { description: "Positions", content: { "application/json": { schema: { type: "object", properties: { chainId: { type: "integer" }, userAddress: { type: "string" }, positions: { type: "array", items: { type: "object" }, description: "Plain loop positions; a vault's yield loop(s) are excluded and listed under equityPositions." }, equityPositions: { type: "array", items: { type: "object" } } } } } } }, ...partnerErr },
         },
       },
       "/v1/prices/chart": {

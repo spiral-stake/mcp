@@ -10,9 +10,9 @@ import { log } from "../config/logger.ts";
 import type { Partner } from "./registry.ts";
 
 export interface UsageEvent {
-  tool: "simulate_leverage" | "build_leverage_tx" | "build_manage_tx";
+  tool: "simulate_leverage" | "build_leverage_tx" | "build_manage_tx" | "simulate_equity_deposit" | "build_equity_deposit_tx" | "build_equity_exit_tx";
   chainId: number;
-  action: string; // "open_leverage" | close | repay | ...
+  action: string; // "open_leverage" | close | repay | ... | "equity_deposit" | "equity_exit"
   userAddress?: string;
   strategyId?: string;
   positionId?: string;

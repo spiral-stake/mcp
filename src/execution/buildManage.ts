@@ -28,6 +28,7 @@ import { resolvePayToken, type ResolvedToken } from "./buildLeverage.ts";
 import { oracleReferenceOut } from "../core/leverage.ts";
 import { portfolioSigningUrl } from "./appLink.ts";
 import { readManagePosition, type ManagePosition } from "./positions.ts";
+import { assertNotVaultYieldLeg } from "./equity.ts";
 import type { LeveragePosition } from "../types/index.ts";
 
 const FLASH_LEVERAGE_ABI = (flashLeverageJson as { abi: Abi }).abi;
@@ -138,6 +139,7 @@ export async function buildManageTx(input: ManageTxInput): Promise<ManageTxBundl
   if (!pos.open) throw new Error(`Position ${id} is already closed`);
   assertMarketDataFresh(chainId); // fail-closed: never adjust a position off stale market data
   const { market } = pos;
+  await assertNotVaultYieldLeg(chainId, userAddress, id, market); // a vault's yield leg is unwound with its stock leg, never alone
   const collateral = market.collateralToken;
   const loan = market.loanToken;
   const addresses = readAddresses(chainId);

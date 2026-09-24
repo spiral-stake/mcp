@@ -47,6 +47,13 @@ describe("getSwapData — KyberSwap availability (Robinhood 4663)", () => {
     );
   });
 
+  it("reports a persisting 429 as rate-limited and transient", async () => {
+    vi.mocked(getJson).mockRejectedValue(new UpstreamError("HTTP 429 from kyberswap-routes", "kyberswap-routes", 429));
+    await expect(getSwapData(4663, false, "0xRecv", "0xIn", "0xOut", 1000n, 0.005, 0)).rejects.toThrow(
+      "KyberSwap (robinhood) is rate-limited: HTTP 429 from kyberswap-routes on all 4 attempts. This is transient — retry in a few seconds.",
+    );
+  });
+
   it("passes a 4xx (route not found) through unchanged", async () => {
     const notFound = new UpstreamError("HTTP 400 from kyberswap-routes", "kyberswap-routes", 400);
     vi.mocked(getJson).mockRejectedValue(notFound);

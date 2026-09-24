@@ -13,7 +13,7 @@ import { rawStore } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { simulateLeverage, buildLeverageTx } from "../execution/buildLeverage.ts";
 import { buildManageTx } from "../execution/buildManage.ts";
-import { getUserPositions } from "../execution/positions.ts";
+import { simulateEquityDeposit, buildEquityDepositTx, buildEquityExitTx, getUserEquityPositions } from "../execution/equity.ts";
 import { captureError } from "../config/sentry.ts";
 import { PRIMARY_CHAIN_ID, SUPPORTED_CHAIN_IDS, isSupportedChain } from "../config/chains.ts";
 
@@ -65,6 +65,12 @@ still redeems 1:1. Weigh against ltvPct.liquidation headroom.
 improvement). maxLeverage is a liquidity bound, not a safety bound.
 Only eligible strategies are returned (thin/near-maturity/no-swap-route/zero-APY markets are hidden). \
 Numbers are a snapshot ('asOf'); they move. This is not financial advice.
+
+Robinhood Chain (4663) also lists directional perps (spiralHints.profile "leveraged_perp": the APYs are \
+financing carry only) and equity vaults (profile "equity_yield_vault": deposit USDG, hold a tokenized \
+stock 1x, the borrowed share farms a yield loop; ids start with "equity-"). Equity vaults have their own \
+tools — simulate_equity_deposit / build_equity_deposit_tx / build_equity_exit_tx — and appear under \
+get_positions.equityPositions; their yield loop cannot be managed alone.
 
 Execution is non-custodial. simulate_leverage previews a position (deterministic, no wallet). \
 build_leverage_tx / build_manage_tx return an UNSIGNED transaction for the user's own wallet to sign \
@@ -207,7 +213,8 @@ export function buildMcpServer(): McpServer {
         "Read a wallet's open/closed Spiral leverage positions from chain state (read-only). For each: " +
         "collateral/loan, leveraged collateral, net equity, debt, current LTV vs liquidation LTV (with " +
         "headroom), current leverage, net USD value, and current leveraged APY. No cost-basis / realized " +
-        "P&L (those need off-chain history). Newest first.",
+        "P&L (those need off-chain history). Newest first. `equityPositions` lists the wallet's open " +
+        "equity vaults (stock leg + the yield loop(s) it funds); those loops are excluded from `positions`.",
       inputSchema: {
         userAddress: z.string().describe("Wallet address to read positions for."),
         chainId: chainIdSchema,
@@ -218,7 +225,7 @@ export function buildMcpServer(): McpServer {
       return runExecution("get_positions", async () => ({
         chainId,
         userAddress,
-        positions: await getUserPositions(chainId, userAddress),
+        ...(await getUserEquityPositions(chainId, userAddress)),
       }));
     },
   );
@@ -252,6 +259,69 @@ export function buildMcpServer(): McpServer {
       },
     },
     async (input) => runExecution("build_manage_tx", () => buildManageTx({ ...input, chainId: resolveChain(input.chainId) })),
+  );
+
+  // ── Equity vaults (stock + yield) ─────────────────────────────────────────────────────────────
+  const equityDepositInput = {
+    strategyId: z.string().describe("The vault's id from list_strategies (starts with 'equity-')."),
+    amount: z.string().describe("Deposit amount in human units of the vault's deposit token (USDG), e.g. '10000'."),
+    stockLtvPct: z
+      .string()
+      .optional()
+      .describe("Stock-leg LTV percent to borrow at (e.g. '50'). Default: the vault's targetLtvPct. Capped at 88% of the stock market's liquidation LTV (55 on a 62.5% market) — a higher value is refused, not clamped."),
+    slippage: z.number().positive().optional().describe("Swap slippage ratio. Default 0.01 (the app's setting for vaults), capped at 0.01."),
+    chainId: chainIdSchema,
+  };
+
+  server.registerTool(
+    "simulate_equity_deposit",
+    {
+      title: "Simulate Equity Vault Deposit",
+      annotations: { title: "Simulate Equity Vault Deposit", readOnlyHint: true },
+      description:
+        "Preview depositing USDG into a stock + yield equity vault — deterministic, read-only, no wallet. You end up 1x " +
+        "long the stock (held as your own Morpho collateral), with `stockLtvPct` of its value borrowed as USDG and " +
+        "flash-looped into the vault's yield strategy. Returns the stock received, the borrow, the stock liquidation " +
+        "price and headroom, the yield leg's size/leverage/APY, the net APY at that LTV, fees and price impact per leg.",
+      inputSchema: equityDepositInput,
+    },
+    async (input) => runExecution("simulate_equity_deposit", () => simulateEquityDeposit({ ...input, chainId: resolveChain(input.chainId) })),
+  );
+
+  server.registerTool(
+    "build_equity_deposit_tx",
+    {
+      title: "Build Equity Vault Deposit",
+      annotations: { title: "Build Equity Vault Deposit", readOnlyHint: false, destructiveHint: false },
+      description:
+        "Build the UNSIGNED call batch to deposit into a stock + yield equity vault, for the given wallet to sign. " +
+        "Non-custodial. Returns `calls[]` (approve USDG → router, authorize the router on Morpho, the one-call " +
+        "equityEntry, revoke) to submit as ONE atomic batch (EIP-5792 wallet_sendCalls / Safe), plus the same preview as " +
+        "simulate_equity_deposit. meta.signingUrl is a one-click link for a human to sign in the app. Swap calldata is " +
+        "time-sensitive (meta.expiresAt).",
+      inputSchema: { ...equityDepositInput, userAddress: z.string().describe("The wallet that will sign and send; the stock leg and yield loop are opened for it.") },
+    },
+    async (input) => runExecution("build_equity_deposit_tx", () => buildEquityDepositTx({ ...input, chainId: resolveChain(input.chainId) })),
+  );
+
+  server.registerTool(
+    "build_equity_exit_tx",
+    {
+      title: "Build Equity Vault Exit",
+      annotations: { title: "Build Equity Vault Exit", readOnlyHint: false, destructiveHint: false },
+      description:
+        "Build the UNSIGNED call batch to fully unwind an OPEN equity vault (from get_positions.equityPositions): " +
+        "close each of its yield loops, then one self-funded router call repays the stock debt, withdraws the stock, " +
+        "swaps it to USDG and returns the proceeds. Submit as ONE atomic batch. Non-custodial; the vault's yield loop " +
+        "cannot be closed alone through build_manage_tx.",
+      inputSchema: {
+        strategyId: z.string().describe("The vault's id ('equity-0x…')."),
+        userAddress: z.string().describe("Wallet that owns the vault and will sign."),
+        slippage: z.number().positive().optional().describe("Swap slippage ratio. Default 0.01, capped at 0.01."),
+        chainId: chainIdSchema,
+      },
+    },
+    async (input) => runExecution("build_equity_exit_tx", () => buildEquityExitTx({ ...input, chainId: resolveChain(input.chainId) })),
   );
 
   return server;

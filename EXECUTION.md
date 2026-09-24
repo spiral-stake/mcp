@@ -79,6 +79,35 @@ Slippage bounded (default 0.5%, hard cap = contract `MAX_SLIPPAGE` 1%).
 | `build_leverage_tx` | same | `UnsignedTxBundle` (below) | **build** (auth TBD) |
 | `get_positions` | `{ userAddress }` | open positions `{ leverage, ltv, liquidationPrice, healthFactor, yieldGenerated }` | read-only |
 
+## Equity vaults (stock + yield) — Robinhood Chain
+
+A vault is two legs the user holds directly: the deposit (USDG) is swapped to a tokenized stock and
+posted as the user's own collateral on a partner Morpho market (Longbow / NetNet Credit); `stockLtvPct`
+of its value is borrowed back and flash-looped into the vault's yield market at that market's
+`safeLtv`. Ported from the app's `utils/equityVaultTx.ts` / `utils/equityPosition.ts`.
+
+| Tool | Args | Returns |
+|---|---|---|
+| `simulate_equity_deposit` | `{ strategyId (equity-0x…), amount, stockLtvPct?, slippage? }` | preview: stock received / borrow / liquidation price + headroom, yield leg size + leverage + APY, net APY at that LTV, fees, price impact |
+| `build_equity_deposit_tx` | same + `userAddress` | `EquityCallBundle`: `calls` = [approve USDG→router · morpho.setAuthorization(router,true) · router.equityEntry · setAuthorization(router,false)] |
+| `build_equity_exit_tx` | `{ strategyId, userAddress, slippage? }` | `EquityCallBundle`: `calls` = [core.deleverage × N yield loops · setAuthorization(true) · router.equityExit · setAuthorization(false)] |
+| `get_positions` | — | now also `equityPositions[]` (stock leg + the yield loop(s) it funds); those loops are removed from `positions` |
+
+- **Atomic batch, not approvals+tx.** The Morpho manager authorization the router needs is granted and
+  revoked inside the batch, so the bundle is an ordered `calls[]` with `atomic: true`, submitted via
+  EIP-5792 `wallet_sendCalls` (the app's `Base.writes`) or a Safe MultiSend. A wallet that cannot batch
+  sends them in order and must always send the final revoke.
+- **Stock LTV.** Default = the vault's `targetLtvPct`; a caller may choose one up to
+  `liqLtv × 0.88` (55 on a 62.5% market — the app's slider ceiling). Above that the build is **refused**,
+  never clamped. The router's own bound (`LLTV − 0.25%`) is checked too.
+- **Fees.** Stock leg = 25 bps (price exposure), yield legs = 5 bps, exit swaps = 0 — as the app.
+- **Fail-closed.** No stock-market borrow liquidity, a yield flash loan above the yield market's direct
+  liquidity (equityEntry has no reallocation path), stale market data, a debt-free stock leg on exit
+  (the router flash-loans the debt), or an unknown/ineligible vault all refuse before quoting.
+- **A vault's yield loop is never managed alone.** `build_manage_tx` refuses every action on a loop
+  that `equityPositions` attributes to a vault (matched on chain by its deposit basis ≈ the stock
+  debt), pointing at `build_equity_exit_tx` — closing it alone strands the stock leg with its debt.
+
 ## Unsigned-tx response contract
 
 ```jsonc

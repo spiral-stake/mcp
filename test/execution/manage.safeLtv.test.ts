@@ -8,6 +8,8 @@ import BigNumber from "bignumber.js";
 
 vi.mock("../../src/core/freshness.ts", () => ({ assertMarketDataFresh: vi.fn() }));
 vi.mock("../../src/execution/positions.ts", () => ({ readManagePosition: vi.fn() }));
+// The vault-yield-leg guard is exercised in equity.exit.test.ts; here it must not reach the chain.
+vi.mock("../../src/execution/equity.ts", () => ({ assertNotVaultYieldLeg: vi.fn() }));
 vi.mock("../../src/data/markets.ts", () => ({
   readAddresses: () => ({
     flashLeverageAddress: "0x4444444444444444444444444444444444444444",

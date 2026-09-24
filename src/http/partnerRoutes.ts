@@ -8,7 +8,7 @@ import { requirePartner, type PartnerVars } from "./partnerAuth.ts";
 import { recordUsage } from "../partners/usage.ts";
 import { simulateLeverage, buildLeverageTx } from "../execution/buildLeverage.ts";
 import { buildManageTx } from "../execution/buildManage.ts";
-import { getUserPositions } from "../execution/positions.ts";
+import { simulateEquityDeposit, buildEquityDepositTx, buildEquityExitTx, getUserEquityPositions } from "../execution/equity.ts";
 import { PRIMARY_CHAIN_ID, SUPPORTED_CHAIN_IDS, isSupportedChain } from "../config/chains.ts";
 import { ApiError } from "./errors.ts";
 
@@ -46,6 +46,21 @@ const manageBody = z.object({
   chainId,
 });
 
+const equityDepositBody = z.object({
+  strategyId: z.string(),
+  amount: z.string(),
+  stockLtvPct: z.string().optional(),
+  slippage: z.number().positive().optional(),
+  chainId,
+});
+const buildEquityDepositBody = equityDepositBody.extend({ userAddress: evmAddress });
+const equityExitBody = z.object({
+  strategyId: z.string(),
+  userAddress: evmAddress,
+  slippage: z.number().positive().optional(),
+  chainId,
+});
+
 async function parseBody<S extends z.ZodTypeAny>(c: { req: { json: () => Promise<unknown> } }, schema: S): Promise<z.infer<S>> {
   const raw = await c.req.json().catch(() => {
     throw new ApiError("bad_request", "Request body must be valid JSON.");
@@ -64,7 +79,7 @@ async function runBuild<T>(fn: () => Promise<T>): Promise<T> {
     return await fn();
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/unknown strategy|not configured|already closed|not correlated|not currently eligible|is not available|is required|invalid|not above/i.test(msg)) {
+    if (/unknown strategy|unknown equity vault|not an equity vault|not configured|already closed|not correlated|not currently eligible|is not available|is required|invalid|not above|above the .* cap|must be a positive|too small|no open .* equity vault|yield leg of your/i.test(msg)) {
       throw new ApiError("bad_request", msg);
     }
     throw new ApiError("upstream_unavailable", msg);
@@ -80,8 +95,33 @@ partnerApi.get("/positions/:address", async (c) => {
   const chain = resolveChain(raw ? Number(raw) : undefined);
   const address = c.req.param("address");
   if (!ADDRESS_RE.test(address)) throw new ApiError("bad_request", `Invalid address "${address}" (expected 0x + 40 hex chars).`);
-  const positions = await runBuild(() => getUserPositions(chain, address));
-  return c.json({ chainId: chain, userAddress: address, positions });
+  const { positions, equityPositions } = await runBuild(() => getUserEquityPositions(chain, address));
+  return c.json({ chainId: chain, userAddress: address, positions, equityPositions });
+});
+
+// Equity vaults (stock + yield): preview, deposit batch, exit batch. Same builders as the MCP tools.
+partnerApi.post("/equity/simulate", async (c) => {
+  const b = await parseBody(c, equityDepositBody);
+  const chain = resolveChain(b.chainId);
+  const result = await runBuild(() => simulateEquityDeposit({ ...b, chainId: chain }));
+  recordUsage(c.get("partner")!, { tool: "simulate_equity_deposit", chainId: chain, action: "equity_deposit", strategyId: b.strategyId });
+  return c.json(result);
+});
+
+partnerApi.post("/equity/deposit/build", async (c) => {
+  const b = await parseBody(c, buildEquityDepositBody);
+  const chain = resolveChain(b.chainId);
+  const bundle = await runBuild(() => buildEquityDepositTx({ ...b, chainId: chain }));
+  recordUsage(c.get("partner")!, { tool: "build_equity_deposit_tx", chainId: chain, action: "equity_deposit", userAddress: b.userAddress, strategyId: b.strategyId, amountFlashLoan: String(bundle.meta.amountFlashLoan) });
+  return c.json(bundle);
+});
+
+partnerApi.post("/equity/exit/build", async (c) => {
+  const b = await parseBody(c, equityExitBody);
+  const chain = resolveChain(b.chainId);
+  const bundle = await runBuild(() => buildEquityExitTx({ ...b, chainId: chain }));
+  recordUsage(c.get("partner")!, { tool: "build_equity_exit_tx", chainId: chain, action: "equity_exit", userAddress: b.userAddress, strategyId: b.strategyId });
+  return c.json(bundle);
 });
 
 // Deterministic position preview (no wallet). Read-only.

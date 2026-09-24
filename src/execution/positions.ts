@@ -46,6 +46,10 @@ export interface LeveragePositionView {
   currentLeverage: string;
   netValueUsd: string; // equity value in USD
   currentLeverageApyPct: string; // leveraged APY at the position's current LTV
+  // On-chain deposit basis in loan-token units (what the position was opened with, per the contract).
+  // Not a cost basis in USD — that needs off-chain history. Also how an equity vault's yield leg is
+  // recognised: its basis is the USDG the stock leg borrowed for it (see execution/equity.ts).
+  amountDepositedInLoanToken: string;
   // Can this position actually be unwound? A one-shot close swaps the FULL leveraged collateral,
   // so the notional that matters is the whole position, not the user's equity. Surfaced per
   // position so a holder (or a monitoring agent) sees the exit degrading before close stops
@@ -194,6 +198,7 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
       ltvHeadroomPct: BigNumber(market.liqLtv).minus(ltv).toFixed(2),
       currentLeverage: currentLeverage.toFixed(2),
       netValueUsd: equityInLoan.multipliedBy(market.loanToken.valueInUsd).toFixed(2),
+      amountDepositedInLoanToken: formatUnits(pos.amountDepositedInLoanToken, market.loanToken.decimals).toFixed(6, BigNumber.ROUND_DOWN),
       // Honest signed carry (pass `true`, not market.correlated): a perp reads as its typically-negative
       // financing carry, matching /v1/strategies' leverageApyPct and the simulate preview rather than the
       // app's sign-flipped "Borrow APY" display. Identical for a correlated loop.

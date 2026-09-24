@@ -69,6 +69,12 @@ describe("getJson retries", () => {
     expect(fetchMock).toHaveBeenCalledTimes(4);
   });
 
+  it("retries a 429 like a 5xx (rate limits clear with the backoff)", async () => {
+    fetchMock.mockResolvedValueOnce(reply(429)).mockResolvedValueOnce(reply(200, { v: 2 }));
+    expect(await settle(getJson<{ v: number }>("https://x/y", { source: "t", retries: 2 }))).toEqual({ v: 2 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
   it("never retries a 4xx", async () => {
     fetchMock.mockResolvedValue(reply(400, { code: 4008, message: "route not found" }));
     const err = (await settle(getJson("https://x/y", { source: "t", retries: 4 }).catch((e) => e))) as UpstreamError;

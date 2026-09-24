@@ -6,6 +6,7 @@ import { describe, it, expect } from "vitest";
 import { encodeFunctionData, decodeFunctionData } from "viem";
 import flr from "../../src/abi/FlashLeverage.sol/FlashLeverage.json" with { type: "json" };
 import router from "../../src/abi/FlashLeverageRouter.sol/FlashLeverageRouter.json" with { type: "json" };
+import { EQUITY_ROUTER_ABI, MORPHO_AUTH_ABI } from "../../src/execution/equity.ts";
 
 const FLR = (flr as any).abi;
 const ROUTER = (router as any).abi;
@@ -34,6 +35,10 @@ const calls: [readonly unknown[], string, unknown[]][] = [
   [ROUTER, "swapAndRepay", [U, 3n, mid, U, 1000n, swapData, 100n, 2n ** 256n - 1n]],
   [FLR, "withdrawCollateral", [3n, 1000n]],
   [FLR, "borrow", [3n, 1000n]],
+  // equity vaults (inline ABI — the equity router is a separate deployment)
+  [EQUITY_ROUTER_ABI, "equityEntry", [{ depositToken: U, amountIn: 1000n, stockSwapData: swapData, stockMinOut: 1n, stockMarketId: mid, stockBorrowAmount: 500n, yieldSwapData: swapData, yieldMinOut: 1n, leverageParams: { ...params, amountCollateral: 0n } }]],
+  [EQUITY_ROUTER_ABI, "equityExit", [{ stockMarketId: mid, stockSwapData: swapData, minLoanOut: 1n }]],
+  [MORPHO_AUTH_ABI, "setAuthorization", [U, true]],
 ];
 
 describe("execution calldata conformance", () => {

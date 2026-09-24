@@ -28,7 +28,7 @@ interface RequestOpts {
   source: string; // upstream label for logs/errors, e.g. "morpho"
   timeoutMs?: number;
   headers?: Record<string, string>;
-  // number of attempts (>=1). Retries are for transient network/5xx only.
+  // number of attempts (>=1). Retries are for transient network / 5xx / 429 (rate-limited) only.
   retries?: number;
   // base backoff between attempts (exponential); default DEFAULT_RETRY_DELAY_MS.
   retryDelayMs?: number;
@@ -47,8 +47,10 @@ async function doFetch(url: string, init: RequestInit, opts: RequestOpts): Promi
     try {
       const res = await fetch(url, { ...init, signal: ac.signal });
       const ms = Date.now() - startedAt;
-      if (!res.ok && res.status >= 500 && attempt < attempts) {
-        log.warn("upstream 5xx, retrying", { source: opts.source, url, status: res.status, ms, attempt });
+      // 429 is as transient as a 5xx: the same request succeeds once the window passes (measured on
+      // KyberSwap's per-IP limit), and the backoff below is exactly the pause it asks for.
+      if (!res.ok && (res.status >= 500 || res.status === 429) && attempt < attempts) {
+        log.warn("upstream 5xx/429, retrying", { source: opts.source, url, status: res.status, ms, attempt });
         lastErr = new UpstreamError(`HTTP ${res.status}`, opts.source, res.status);
         continue;
       }
@@ -59,7 +61,7 @@ async function doFetch(url: string, init: RequestInit, opts: RequestOpts): Promi
       return res;
     } catch (e) {
       lastErr = e;
-      const transient = attempt < attempts && !(e instanceof UpstreamError && (e.status ?? 0) < 500);
+      const transient = attempt < attempts && !(e instanceof UpstreamError && (e.status ?? 0) < 500 && e.status !== 429);
       log.warn("upstream fetch failed", {
         source: opts.source,
         url,

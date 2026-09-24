@@ -2009,12 +2009,763 @@
         }
       }
     },
+    "/v1/partner/equity/simulate": {
+      "post": {
+        "tags": [
+          "Partner"
+        ],
+        "summary": "Preview a stock + yield equity-vault deposit (deterministic, no wallet)",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "strategyId",
+                  "amount"
+                ],
+                "properties": {
+                  "strategyId": {
+                    "type": "string",
+                    "description": "The vault's id from /v1/strategies (starts with 'equity-')."
+                  },
+                  "amount": {
+                    "type": "string",
+                    "description": "Deposit in human units of the vault's deposit token (USDG), e.g. '10000'."
+                  },
+                  "stockLtvPct": {
+                    "type": "string",
+                    "description": "Stock-leg LTV percent. Default: the vault's targetLtvPct. Capped at 88% of the stock market's liquidation LTV; above it the request is refused."
+                  },
+                  "slippage": {
+                    "type": "number",
+                    "description": "Ratio, default 0.01 (the app's equity setting), capped at 0.01."
+                  },
+                  "chainId": {
+                    "type": "integer",
+                    "enum": [
+                      4663
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Deposit preview",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "chainId": {
+                      "type": "integer"
+                    },
+                    "strategyId": {
+                      "type": "string"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "equity_deposit"
+                      ]
+                    },
+                    "preview": {
+                      "type": "object"
+                    },
+                    "note": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing/invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Transient (stale data / no route / RPC) — retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/partner/equity/deposit/build": {
+      "post": {
+        "tags": [
+          "Partner"
+        ],
+        "summary": "Build the unsigned deposit batch for a stock + yield equity vault",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "allOf": [
+                  {
+                    "type": "object",
+                    "required": [
+                      "strategyId",
+                      "amount"
+                    ],
+                    "properties": {
+                      "strategyId": {
+                        "type": "string",
+                        "description": "The vault's id from /v1/strategies (starts with 'equity-')."
+                      },
+                      "amount": {
+                        "type": "string",
+                        "description": "Deposit in human units of the vault's deposit token (USDG), e.g. '10000'."
+                      },
+                      "stockLtvPct": {
+                        "type": "string",
+                        "description": "Stock-leg LTV percent. Default: the vault's targetLtvPct. Capped at 88% of the stock market's liquidation LTV; above it the request is refused."
+                      },
+                      "slippage": {
+                        "type": "number",
+                        "description": "Ratio, default 0.01 (the app's equity setting), capped at 0.01."
+                      },
+                      "chainId": {
+                        "type": "integer",
+                        "enum": [
+                          4663
+                        ]
+                      }
+                    }
+                  },
+                  {
+                    "type": "object",
+                    "required": [
+                      "userAddress"
+                    ],
+                    "properties": {
+                      "userAddress": {
+                        "type": "string",
+                        "description": "Wallet that will sign; the stock leg and yield loop are opened for it."
+                      }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Unsigned call batch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "An ORDERED call batch for the user's own wallet, meant to be submitted atomically (EIP-5792 wallet_sendCalls / Safe MultiSend) — the Morpho manager authorization the router needs is granted and revoked inside the batch. A wallet that cannot batch sends the calls in order and must always send the final (revoke) call.",
+                  "properties": {
+                    "chainId": {
+                      "type": "integer"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "equity_deposit",
+                        "equity_exit"
+                      ]
+                    },
+                    "strategyId": {
+                      "type": "string"
+                    },
+                    "calls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "to": {
+                            "type": "string"
+                          },
+                          "data": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "to",
+                          "data"
+                        ]
+                      }
+                    },
+                    "atomic": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "preview": {
+                          "type": "object",
+                          "description": "Deposit: the same preview as /equity/simulate. Exit: `position` (the vault being unwound) instead."
+                        },
+                        "slippage": {
+                          "type": "number"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "signingUrl": {
+                          "type": "string"
+                        },
+                        "instructions": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "chainId",
+                    "action",
+                    "strategyId",
+                    "calls",
+                    "atomic",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing/invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Transient (stale data / no route / RPC) — retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/partner/equity/exit/build": {
+      "post": {
+        "tags": [
+          "Partner"
+        ],
+        "summary": "Build the unsigned batch that fully unwinds an open equity vault",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "strategyId",
+                  "userAddress"
+                ],
+                "properties": {
+                  "strategyId": {
+                    "type": "string",
+                    "description": "The vault's id ('equity-0x…')."
+                  },
+                  "userAddress": {
+                    "type": "string",
+                    "description": "Wallet that owns the vault and will sign."
+                  },
+                  "slippage": {
+                    "type": "number",
+                    "description": "Ratio, default 0.01, capped at 0.01."
+                  },
+                  "chainId": {
+                    "type": "integer",
+                    "enum": [
+                      4663
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Unsigned call batch",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "An ORDERED call batch for the user's own wallet, meant to be submitted atomically (EIP-5792 wallet_sendCalls / Safe MultiSend) — the Morpho manager authorization the router needs is granted and revoked inside the batch. A wallet that cannot batch sends the calls in order and must always send the final (revoke) call.",
+                  "properties": {
+                    "chainId": {
+                      "type": "integer"
+                    },
+                    "action": {
+                      "type": "string",
+                      "enum": [
+                        "equity_deposit",
+                        "equity_exit"
+                      ]
+                    },
+                    "strategyId": {
+                      "type": "string"
+                    },
+                    "calls": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "to": {
+                            "type": "string"
+                          },
+                          "data": {
+                            "type": "string"
+                          },
+                          "value": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "to",
+                          "data"
+                        ]
+                      }
+                    },
+                    "atomic": {
+                      "type": "boolean",
+                      "enum": [
+                        true
+                      ]
+                    },
+                    "meta": {
+                      "type": "object",
+                      "properties": {
+                        "preview": {
+                          "type": "object",
+                          "description": "Deposit: the same preview as /equity/simulate. Exit: `position` (the vault being unwound) instead."
+                        },
+                        "slippage": {
+                          "type": "number"
+                        },
+                        "expiresAt": {
+                          "type": "string",
+                          "format": "date-time"
+                        },
+                        "signingUrl": {
+                          "type": "string"
+                        },
+                        "instructions": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  },
+                  "required": [
+                    "chainId",
+                    "action",
+                    "strategyId",
+                    "calls",
+                    "atomic",
+                    "meta"
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing/invalid API key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Rate limited",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Transient (stale data / no route / RPC) — retry",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "object",
+                      "properties": {
+                        "code": {
+                          "type": "string"
+                        },
+                        "message": {
+                          "type": "string"
+                        },
+                        "correlationId": {
+                          "type": "string"
+                        },
+                        "details": {}
+                      },
+                      "required": [
+                        "code",
+                        "message",
+                        "correlationId"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/partner/positions/{address}": {
       "get": {
         "tags": [
           "Partner"
         ],
-        "summary": "A wallet's open/closed positions",
+        "summary": "A wallet's open/closed positions, plus its open equity vaults (`equityPositions`)",
         "security": [
           {
             "bearerAuth": []
@@ -2061,6 +2812,13 @@
                       "type": "string"
                     },
                     "positions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object"
+                      },
+                      "description": "Plain loop positions; a vault's yield loop(s) are excluded and listed under equityPositions."
+                    },
+                    "equityPositions": {
                       "type": "array",
                       "items": {
                         "type": "object"

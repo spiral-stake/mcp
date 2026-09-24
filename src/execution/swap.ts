@@ -313,13 +313,14 @@ async function callKyberswap(
   };
 }
 
-// A 5xx that survived every attempt is the aggregator being down/overloaded, not a property of the
-// strategy or the size: say so, and say it is transient. Anything else (4xx "route not found",
-// malformed reply) passes through unchanged.
+// A 5xx (down/overloaded) or 429 (rate-limited) that survived every attempt is the aggregator, not a
+// property of the strategy or the size: say so, and say it is transient. Anything else (4xx "route
+// not found", malformed reply) passes through unchanged.
 function kyberUnavailable(e: unknown, chainName: string): unknown {
-  if (e instanceof UpstreamError && (e.status ?? 0) >= 500) {
+  if (e instanceof UpstreamError && ((e.status ?? 0) >= 500 || e.status === 429)) {
+    const why = e.status === 429 ? "rate-limited" : "temporarily unavailable";
     return new Error(
-      `KyberSwap (${chainName}) is temporarily unavailable: HTTP ${e.status} from ${e.source} on all ` +
+      `KyberSwap (${chainName}) is ${why}: HTTP ${e.status} from ${e.source} on all ` +
         `${KYBER_ATTEMPTS} attempts. This is transient — retry in a few seconds.`,
     );
   }
