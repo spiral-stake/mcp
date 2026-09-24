@@ -83,7 +83,7 @@ The single contract the `../mcp` service produces and both the app (llms.txt/JSO
     { "leverage": "5.4", "ltvPct": "81.5", "leverageApyPct": "35.62" }   // = maxLeverage
   ],
   "defaultLeverage": { "leverage": "3.0", "ltvPct": "66.7", "leverageApyPct": "18.94" },
-  "historicalLeverageApyPct": { "avg30d": "18.10", "avg60d": "18.55", "avg90d": "17.80" },
+  "historicalLeverageApyPct": { "avg30d": "18.10", "avg60d": "18.55", "avg90d": "17.80" },   // only the windows with history; ABSENT when none
 
   // ── risk facts (raw, NO verdicts) ──
   "ltvPct": { "liquidation": "86.0", "max": "77.0" },     // liqLtv / maxLtv
@@ -96,7 +96,7 @@ The single contract the `../mcp` service produces and both the app (llms.txt/JSO
     "measured": true,
     "asOf": "2026-07-06T06:00:00Z",
     "method": "onchain quote sweep",
-    "direction": "collateral_to_usdc",
+    "direction": "collateral_to_usdc",   // the chain's exit stable: usdc on mainnet, usdg on Robinhood Chain
     "slippagePct": { "100000": "0.01", "500000": "0.05", "1000000": "0.05", "5000000": "0.13" }
     // raw facts; a size is `null` when there is no route at that notional
   },

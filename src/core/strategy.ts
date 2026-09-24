@@ -17,7 +17,7 @@ import { collateralTokensAsOf } from "../data/markets.ts";
 import { marketUrl, partnerMarketCurator } from "../data/robinhoodMarkets.ts";
 import { KEYS, EXIT_LIQUIDITY_STALE_AFTER_SEC } from "../cache/policy.ts";
 import type { FreshView } from "../cache/store.ts";
-import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
+import { exitStableSymbol, type ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 import type {
   Strategy,
   LadderPoint,
@@ -122,7 +122,7 @@ const EXIT_SIZES: [keyof Pick<CollateralTokenInfo, "exitSlippage100k" | "exitSli
   ["exitSlippage10M", "10000000"],
 ];
 
-function buildExitLiquidity(info: CollateralTokenInfo | undefined, asOf: string): ExitLiquidity {
+function buildExitLiquidity(info: CollateralTokenInfo | undefined, asOf: string, chainId: number): ExitLiquidity {
   if (!info || info.exitSlippage100k === undefined) {
     return { measured: false };
   }
@@ -136,7 +136,8 @@ function buildExitLiquidity(info: CollateralTokenInfo | undefined, asOf: string)
     measured: true,
     asOf,
     method: "onchain quote sweep",
-    direction: "collateral_to_usdc",
+    // The stable the sweep sold into on this chain (USDC on mainnet, USDG on Robinhood).
+    direction: `collateral_to_${exitStableSymbol(chainId).toLowerCase()}`,
     slippagePct,
   };
 }
@@ -168,10 +169,14 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   const supplyUsd = market.supplyAssetsUsd;
   const liquidityUsd = market.liquidityAssetsUsd;
   const borrowedAssets = market.supplyAssets.minus(market.liquidityAssets);
+  // Morpho can report a hair more liquidity than supply on an idle market (rounding); that is 0%
+  // utilised, never "-0.00".
   const utilizationPct =
     market.supplyAssets.isZero() || market.supplyAssets.isNegative()
       ? undefined
-      : borrowedAssets.div(market.supplyAssets).multipliedBy(100).toFixed(2);
+      : borrowedAssets.isNegative()
+        ? "0.00"
+        : borrowedAssets.div(market.supplyAssets).multipliedBy(100).toFixed(2);
 
   const publicAllocatorLiquidityUsd = market.paLiquidityAssets
     .multipliedBy(market.loanToken.valueInUsd)
@@ -191,7 +196,7 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
 
   // exit liquidity + the Spiral opinion block (isolated, with thresholds). Two overridable hints:
   // the exit-liquidity tier, and — for uncorrelated markets — how to read the (carry-only) APYs.
-  const exitLiquidity = buildExitLiquidity(info, exitAsOf);
+  const exitLiquidity = buildExitLiquidity(info, exitAsOf, chainId);
   const tier = exitLiquidityTier(info);
   const ev = market.equityVault;
   const spiralHints =
@@ -287,6 +292,17 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
   // Longbow perp market resolves through the same registry the market link uses. Else absent.
   const curator = ev?.curator ?? partnerMarketCurator(chainId, market);
 
+  const historicalWindows = Object.fromEntries(
+    (
+      [
+        ["avg30d", honestHistorical(market.avg30dLeverageApy)],
+        ["avg60d", honestHistorical(market.avg60dLeverageApy)],
+        ["avg90d", honestHistorical(market.avg90dLeverageApy)],
+      ] as const
+    ).filter(([, v]) => v !== undefined),
+  ) as Strategy["historicalLeverageApyPct"];
+  const historicalLeverageApyPct = Object.keys(historicalWindows ?? {}).length > 0 ? historicalWindows : undefined;
+
   const strategy: Strategy = {
     id: market.morphoMarketId,
     chainId,
@@ -321,11 +337,9 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
 
     leverageLadder: ladder,
     defaultLeverage: defaultPoint,
-    historicalLeverageApyPct: {
-      avg30d: honestHistorical(market.avg30dLeverageApy),
-      avg60d: honestHistorical(market.avg60dLeverageApy),
-      avg90d: honestHistorical(market.avg90dLeverageApy),
-    },
+    // Only the windows the market has history for; the block is ABSENT (not `{}`) when it has none
+    // (an equity vault, or a market younger than 30 days) — absent = not measured, per the contract.
+    ...(historicalLeverageApyPct ? { historicalLeverageApyPct } : {}),
 
     ltvPct: { liquidation: market.liqLtv, max: market.maxLtv },
     oracle: { address: market.oracle, ...(market.oracleType ? { type: market.oracleType } : {}) },

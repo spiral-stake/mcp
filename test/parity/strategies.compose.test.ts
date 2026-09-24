@@ -99,6 +99,14 @@ describe("strategy composition (seeded fixture)", () => {
     );
   });
 
+  it("reports 0.00 utilisation, never -0.00, when Morpho shows more liquidity than supply", () => {
+    const view = rawStore.view<Record<string, unknown>>(KEYS.morphoMarkets(CHAIN))!.value;
+    const m = view[m0.morphoMarketId] as { supplyAssets: BigNumber; liquidityAssets: BigNumber };
+    rawStore.setOk(KEYS.morphoMarkets(CHAIN), { ...view, [m0.morphoMarketId]: { ...m, liquidityAssets: m.supplyAssets.plus(1) } }, 300);
+    const s = buildStrategies(CHAIN).strategies.find((x) => x.id === m0.morphoMarketId)!;
+    expect(s.utilizationPct).toBe("0.00");
+  });
+
   it("builds the leverage ladder + defaultLeverage with the verbatim leverage.ts", () => {
     const env = buildStrategies(CHAIN);
     const s = env.strategies.find((x) => x.id === m0.morphoMarketId)!;

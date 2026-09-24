@@ -9,6 +9,8 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
 import BigNumber from "bignumber.js";
 import { buildStrategies, buildStrategy } from "../core/strategy.ts";
+import { composeSnapshot } from "../core/compose.ts";
+import { buildEquityMarkets } from "../core/equity.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "../cache/policy.ts";
 import { simulateLeverage, buildLeverageTx } from "../execution/buildLeverage.ts";
@@ -94,13 +96,16 @@ export function buildMcpServer(): McpServer {
       title: "List Strategies",
       annotations: { title: "List Strategies", readOnlyHint: true },
       description:
-        "List eligible Spiral leveraged-yield strategies with raw risk facts (collateral/borrow APY, " +
-        "leverage ladder, oracle type, exit-liquidity, LTVs). Optionally filter by collateral category.",
+        "List eligible Spiral strategies on a chain with raw risk facts (collateral/borrow APY, leverage ladder, " +
+        "oracle type, exit liquidity, LTVs, curator). Mainnet (1): correlated yield loops on stables, ETH, BTC and " +
+        "Pendle PTs. Robinhood Chain (4663): stable loops on USDG, directional perps (spiralHints.profile " +
+        "'leveraged_perp' — APYs are financing carry only) and stock + yield equity vaults (profile " +
+        "'equity_yield_vault', ids start with 'equity-'). Optionally filter by collateral category.",
       inputSchema: {
         category: z
           .string()
           .optional()
-          .describe("Filter by collateral category, e.g. 'stable', 'ETH', 'BTC', 'stable-PT'."),
+          .describe("Filter by collateral category: 'stable', 'ETH', 'BTC', 'stable-PT', 'stocks' (equity vaults), 'Other' (perps)."),
         chainId: chainIdSchema,
       },
     },
@@ -139,16 +144,27 @@ export function buildMcpServer(): McpServer {
     {
       title: "Get Prices",
       annotations: { title: "Get Prices", readOnlyHint: true },
-      description: "Current USD prices for loan/collateral tokens (token address -> USD).",
+      description:
+        "Current USD prices of every loan and collateral token the chain's strategies use (token address -> USD), " +
+        "including equity-vault stocks. Loan tokens are priced from CoinGecko; collateral from the market oracle × " +
+        "its loan token's price — the same figures the strategies' priceUsd fields carry.",
       inputSchema: { chainId: chainIdSchema },
     },
     async ({ chainId: rawChainId }) => {
-      const view = rawStore.view<Record<string, BigNumber>>(KEYS.prices(resolveChain(rawChainId)));
+      const chainId = resolveChain(rawChainId);
+      // Scoped to THIS chain's markets (the raw price view is a cross-chain loan-token list) and
+      // extended with every collateral, which the raw view never held.
+      const snapshot = composeSnapshot(chainId);
+      const loops = snapshot.markets.map((m) => m.market);
       const prices: Record<string, number> = {};
-      for (const [address, p] of Object.entries(view?.value ?? {})) {
-        prices[address] = p instanceof BigNumber ? p.toNumber() : Number(p);
+      for (const m of [...loops, ...buildEquityMarkets(chainId, loops)]) {
+        const loan = m.loanToken.valueInUsd;
+        const coll = m.collateralToken.valueInUsd;
+        if (loan && !loan.isZero()) prices[m.loanToken.address] = loan.toNumber();
+        if (coll && !coll.isZero()) prices[m.collateralToken.address] = coll.toNumber();
       }
-      return jsonResult({ asOf: view?.asOf ?? null, prices });
+      const view = rawStore.view<Record<string, BigNumber>>(KEYS.prices(chainId));
+      return jsonResult({ asOf: view?.asOf ?? snapshot.asOf, chainId, prices });
     },
   );
 

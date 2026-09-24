@@ -14,7 +14,9 @@ into the places agents/users discover MCP servers — these are manual (account 
 - [ ] **Awesome MCP servers** — PR to the relevant awesome-list(s)
 
 For each: name `spiralstake`, transport `streamable-http`, url `https://api.spiralstake.xyz/mcp`,
-tools `list_strategies`, `get_strategy`, `get_prices`, category "DeFi / crypto / finance".
+tools `list_strategies`, `get_strategy`, `get_prices`, `get_positions`, `simulate_leverage`, `build_leverage_tx`,
+`build_manage_tx`, `simulate_equity_deposit`, `build_equity_deposit_tx`, `build_equity_exit_tx`,
+category "DeFi / crypto / finance".
 
 ## Skill
 - [ ] Publish `skill/SKILL.md` (this dir) to the skill registry / `npx skills` index you target.

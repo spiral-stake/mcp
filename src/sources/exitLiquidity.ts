@@ -30,10 +30,13 @@ const CG_URL = "https://api.coingecko.com/api/v3/simple/price";
 // (and swap.ts); stable is the exit leg the leverage contract swaps into on that chain. A chain
 // missing here is simply not measured — never quoted against the wrong chain (which returns
 // "token not found" and would masquerade as a genuine no-route / "thin").
-const CHAIN: Record<number, { slug: string; stable: string }> = {
-  1: { slug: "ethereum", stable: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48" }, // USDC
-  4663: { slug: "robinhood", stable: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168" }, // USDG
+const CHAIN: Record<number, { slug: string; stable: string; stableSymbol: string }> = {
+  1: { slug: "ethereum", stable: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", stableSymbol: "USDC" },
+  4663: { slug: "robinhood", stable: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", stableSymbol: "USDG" },
 };
+
+/** The stable the exit sweep quotes INTO on a chain (what `exitLiquidity.direction` names). */
+export const exitStableSymbol = (chainId: number): string => CHAIN[chainId]?.stableSymbol ?? "USDC";
 
 const SIZES = {
   exitSlippage100k: 100_000,

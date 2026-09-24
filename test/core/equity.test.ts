@@ -152,6 +152,12 @@ describe("equity vaults on /v1/strategies — curator + description", () => {
     for (const s of strategies) expect(s.links?.market).not.toContain("equity-");
   });
 
+  it("omits the historical-APY block on a vault (no ladder history) instead of sending {}", () => {
+    for (const s of buildStrategies(CHAIN).strategies.filter((s) => s.id.startsWith("equity-"))) {
+      expect(s).not.toHaveProperty("historicalLeverageApyPct");
+    }
+  });
+
   it("tells the two NVDA vaults apart", () => {
     const nvda = buildStrategies(CHAIN).strategies.filter((s) => s.collateral.symbol === "NVDA");
     expect(nvda).toHaveLength(2);
@@ -182,7 +188,7 @@ describe("equity vaults — exit liquidity from the live sweep", () => {
     const { strategies } = buildStrategies(CHAIN);
 
     const s = strategies.find((x) => x.id === spy().id)!;
-    expect(s.exitLiquidity).toMatchObject({ measured: true, asOf: view.asOf, direction: "collateral_to_usdc" });
+    expect(s.exitLiquidity).toMatchObject({ measured: true, asOf: view.asOf, direction: "collateral_to_usdg" }); // Robinhood exits into USDG
     expect(s.exitLiquidity.slippagePct).toEqual({ "100000": "0.10", "500000": "0.30", "1000000": "0.45", "5000000": "9.80", "10000000": "40.10" });
     expect(s.spiralHints?.exitLiquidityTier?.value).toBe("good"); // $1M clean, $5M not
     expect(s.freshness.exitLiquidity?.asOf).toBe(view.asOf);

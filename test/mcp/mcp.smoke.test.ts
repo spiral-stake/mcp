@@ -89,6 +89,14 @@ describe("MCP /mcp endpoint", () => {
     expect(payload.leverageLadder[0].leverage).toBe("1.0");
   });
 
+  it("tools/call get_prices returns the chain's loan AND collateral prices", async () => {
+    const { json } = await rpc({ jsonrpc: "2.0", id: 5, method: "tools/call", params: { name: "get_prices", arguments: { chainId: CHAIN } } });
+    const body = JSON.parse(json.result.content[0].text);
+    expect(body.chainId).toBe(CHAIN);
+    expect(body.prices[m0.loanToken.address]).toBe(1);
+    expect(body.prices[m0.collateralToken.address]).toBeCloseTo(1.02, 6); // oracle rate × loan price
+  });
+
   it("tools/call get_strategy on an unknown id is a tool error, not a crash", async () => {
     const { json } = await rpc({
       jsonrpc: "2.0",
