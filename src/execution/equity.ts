@@ -539,8 +539,9 @@ export function matchVaultYieldLoops<T extends { amountDepositedInLoanToken: str
   return { loops: [...tagged, ...minimal[0]], match: tagged.length > 0 ? "mixed" : "basis", ambiguous: [] };
 }
 
-// The dashboard's per-user rows: positionId (`${yieldMarketId}-${index}`) → equityMarketId, for
-// rows the app tagged at open. Best-effort: the dashboard being down degrades to basis matching
+// The dashboard's per-user rows: positionId → equityMarketId, for rows the app tagged at open.
+// The dashboard stores positionId as `${user}-${marketId}-${index}` (routes/leverage.js prefixes the
+// lowercased user on write), so the key is rebuilt that way — a bare `${marketId}-${index}` never hits. Best-effort: the dashboard being down degrades to basis matching
 // (which then fails closed on ambiguity), never to a wrong claim.
 async function fetchVaultTags(chainId: number, user: string): Promise<Map<string, string>> {
   const tags = new Map<string, string>();
@@ -607,7 +608,7 @@ async function resolveUserEquity(
   const vaults = buildEquityMarkets(chainId, loops);
   if (vaults.length === 0) return { equityPositions: [], positions, allPositions: positions };
   const tags = await fetchVaultTags(chainId, user);
-  const tagOf = (p: LeveragePositionView) => tags.get(`${p.strategyId}-${p.id}`.toLowerCase());
+  const tagOf = (p: LeveragePositionView) => tags.get(`${user}-${p.strategyId}-${p.id}`.toLowerCase());
 
   const flashLeverageAddress = readAddresses(chainId).flashLeverageAddress as `0x${string}`;
   const client = getClient(chainId);

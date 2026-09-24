@@ -161,9 +161,10 @@ describe("getUserEquityPositions", () => {
     mockChain({ withLookalike: true });
     const yieldId = spy().yieldMarketId;
     // The dashboard says loop 2 is the SPY vault's leg (and loop 0 belongs to NetNet's NVDA vault).
+    // positionId is stored exactly as the dashboard writes it: `${user}-${marketId}-${index}`.
     vi.mocked(getJson).mockResolvedValue([
-      { positionId: `${yieldId}-2`, equityMarketId: spy().id.toUpperCase() },
-      { positionId: `${yieldId}-0`, equityMarketId: "equity-0x8b16891f032a93b771347c9cb470a780e6699dd701553d3402aa3cdba6189c3e" },
+      { positionId: `${USER}-${yieldId}-2`, equityMarketId: spy().id.toUpperCase() },
+      { positionId: `${USER}-${yieldId}-0`, equityMarketId: "equity-0x8b16891f032a93b771347c9cb470a780e6699dd701553d3402aa3cdba6189c3e" },
     ]);
     const { equityPositions, positions } = await getUserEquityPositions(CHAIN, USER);
     const v = equityPositions.find((p) => p.strategyId === spy().id)!;
