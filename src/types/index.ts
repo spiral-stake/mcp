@@ -108,6 +108,7 @@ export interface Market {
 // The composite config + live economics of an equity vault, carried on the synthetic Market/Strategy.
 export interface EquityVaultInfo {
   stockMarketId: string; // external Morpho market: stock collateral / USDG loan
+  curator: string; // who curates the stock market (Longbow / NetNet Credit) — the only fact that tells two same-ticker vaults apart
   targetLtvPct: string; // borrow ratio on the stock leg
   liqLtvPct: string; // stock market LLTV (liquidation threshold)
   yieldMarketId: string; // Spiral yield-loop market the borrowed USDG is deployed into

@@ -30,7 +30,17 @@ export function openApiSpec() {
       id: { type: "string", description: "Morpho market id (0x + 64 hex)." },
       chainId: { type: "integer" },
       correlated: { type: "boolean" },
-      collateral: { type: "object" },
+      curator: {
+        type: "string",
+        nullable: true,
+        example: "Longbow",
+        description:
+          "Who curates the market the collateral is posted on. Present only on partner-curated markets (equity vaults: Longbow / NetNet Credit) — distinguishes two vaults on the same ticker. Absent on Spiral's own loop markets.",
+      },
+      collateral: {
+        type: "object",
+        description: "Collateral token facts; `description` is the curated plain-English account of what it is and how it earns.",
+      },
       loan: { type: "object" },
       collateralApyPct: { type: "string" },
       collateralApySource: { type: "string", enum: ["pendle", "defillama", "royco", "stablewatch", "onchain", "none"] },

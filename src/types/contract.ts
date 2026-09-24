@@ -26,6 +26,7 @@ export interface StrategyCollateral {
   category: string; // stable | ETH | BTC | stable-PT | stocks | Nest RWA | Other
   project?: string;
   yieldSource?: string;
+  description?: string; // curated plain-English description of the collateral (what it is, how it earns)
   priceUsd?: number;
   isPt: boolean;
   maturity: number | null;
@@ -82,6 +83,10 @@ export interface Strategy {
   id: string;
   chainId: number;
   correlated: boolean;
+  // Who curates the market the collateral is posted on. Present only where a strategy runs on a
+  // partner-curated market (equity vaults: "Longbow" / "NetNet Credit") — it is what distinguishes
+  // two vaults on the same ticker. Absent on Spiral's own loop markets.
+  curator?: string;
 
   collateral: StrategyCollateral;
   loan: StrategyLoan;

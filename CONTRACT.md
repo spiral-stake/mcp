@@ -36,11 +36,14 @@ The single contract the `../mcp` service produces and both the app (llms.txt/JSO
   "id": "0xMORPHO_MARKET_ID",
   "chainId": 1,
   "correlated": true,                 // collateral↔loan correlated (leverage-relevant fact)
+  "curator": "Longbow",               // ONLY on partner-curated markets (equity vaults: Longbow | NetNet Credit);
+                                      // the fact that tells two same-ticker vaults apart. Absent on Spiral loops.
 
   "collateral": {
     "address": "0x…", "symbol": "sUSDe", "name": "…", "decimals": 18,
     "category": "stable",             // stable | ETH | BTC | stable-PT | stocks | Nest RWA | Other
     "project": "Ethena", "yieldSource": "funding basis",
+    "description": "sUSDe is …",      // curated plain-English: what the collateral is, how it earns (absent if uncurated)
     "priceUsd": 1.001,
     "isPt": false,
     "maturity": null, "maturityDate": null, "maturityDaysLeft": null,   // fixed-term facts

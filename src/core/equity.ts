@@ -146,6 +146,7 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
       supplyAssets: BigNumber(raw.supplyUsd),
       equityVault: {
         stockMarketId: v.stockMarketId,
+        curator: v.curator,
         targetLtvPct: v.targetLtvPct.toFixed(2),
         liqLtvPct: v.liqLtvPct.toFixed(2),
         yieldMarketId: v.yieldMarketId,

@@ -10,7 +10,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import BigNumber from "bignumber.js";
 import { rawStore } from "../../src/cache/store.ts";
 import { KEYS } from "../../src/cache/policy.ts";
-import { readMarkets } from "../../src/data/markets.ts";
+import { readMarkets, registries } from "../../src/data/markets.ts";
 import { buildStrategies } from "../../src/core/strategy.ts";
 import { calcLeverage, calcLeverageApy } from "../../src/core/leverage.ts";
 import { exitLiquidityTier } from "../../src/core/exitLiquidity.ts";
@@ -88,6 +88,11 @@ describe("strategy composition (seeded fixture)", () => {
     // risk facts — LTVs from formatUnits(lltv, 16)
     expect(s.ltvPct.liquidation).toBe("94.50");
     expect(s.ltvPct.max).toBe("94.25");
+
+    // identity facts — the curated description ships; `curator` is a partner-market fact and is
+    // ABSENT (not null) on Spiral's own loop markets.
+    expect(s.collateral.description).toBe(registries.collateralTokens[m0.collateralToken.address].description);
+    expect(s).not.toHaveProperty("curator");
   });
 
   it("builds the leverage ladder + defaultLeverage with the verbatim leverage.ts", () => {

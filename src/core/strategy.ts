@@ -264,6 +264,7 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
     category: info?.category ?? "Other",
     project: info?.project,
     yieldSource: info?.yieldSource,
+    ...(info?.description ? { description: info.description } : {}),
     priceUsd: market.collateralToken.valueInUsd?.toNumber(),
     isPt: market.collateralToken.isPt,
     maturity: null, // on-chain maturity not read in the baseline (static maturityDate below)
@@ -278,6 +279,7 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
     id: market.morphoMarketId,
     chainId,
     correlated: market.correlated,
+    ...(ev ? { curator: ev.curator } : {}),
     collateral,
     loan: {
       address: market.loanToken.address,

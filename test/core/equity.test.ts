@@ -15,6 +15,7 @@ import { composeSnapshot } from "../../src/core/compose.ts";
 import { readMarkets } from "../../src/data/markets.ts";
 import { buildEquityMarkets } from "../../src/core/equity.ts";
 import { equityVaultsFor } from "../../src/data/equityVaults.ts";
+import { buildStrategies } from "../../src/core/strategy.ts";
 import { TokenCategory } from "../../src/types/index.ts";
 
 const CHAIN = 4663;
@@ -115,5 +116,30 @@ describe("buildEquityMarkets — collateral token info", () => {
     expect(new Set(nvda.map((m) => m.collateralToken.info.project)).size).toBe(1);
     expect(nvda[0].collateralToken.info.description).toContain("Longbow");
     expect(nvda[1].collateralToken.info.description).toContain("NetNet Credit");
+  });
+});
+
+// The agent contract must carry the two facts that tell same-ticker vaults apart: the curator of
+// the stock market, and the collateral description (which names it too). Until 2026-09-24 neither
+// left the app payload, so the Longbow and NetNet Credit NVDA vaults were indistinguishable.
+describe("equity vaults on /v1/strategies — curator + description", () => {
+  beforeEach(seed);
+
+  it("names the curator on every vault and only on vaults", () => {
+    const { strategies } = buildStrategies(CHAIN);
+    const vaults = strategies.filter((s) => s.id.startsWith("equity-"));
+    expect(vaults).toHaveLength(equityVaultsFor(CHAIN).length);
+    for (const s of vaults) {
+      const v = equityVaultsFor(CHAIN).find((c) => c.id === s.id)!;
+      expect(s.curator).toBe(v.curator);
+      expect(s.collateral.description).toContain(`${v.curator}'s Morpho market`);
+    }
+    for (const s of strategies.filter((s) => !s.id.startsWith("equity-"))) expect(s).not.toHaveProperty("curator");
+  });
+
+  it("tells the two NVDA vaults apart", () => {
+    const nvda = buildStrategies(CHAIN).strategies.filter((s) => s.collateral.symbol === "NVDA");
+    expect(nvda).toHaveLength(2);
+    expect(new Set(nvda.map((s) => s.curator))).toEqual(new Set(["Longbow", "NetNet Credit"]));
   });
 });
