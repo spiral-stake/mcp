@@ -14,6 +14,7 @@ import {
 } from "./exitLiquidity.ts";
 import { avgCollateralApyOverDays } from "./leverageApy.ts";
 import { collateralTokensAsOf } from "../data/markets.ts";
+import { marketUrl, partnerMarketCurator } from "../data/robinhoodMarkets.ts";
 import { KEYS, EXIT_LIQUIDITY_STALE_AFTER_SEC } from "../cache/policy.ts";
 import type { FreshView } from "../cache/store.ts";
 import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
@@ -282,11 +283,15 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
       : {}),
   };
 
+  // Partner-curated markets only: a vault names its stock market's curator from its own config; a
+  // Longbow perp market resolves through the same registry the market link uses. Else absent.
+  const curator = ev?.curator ?? partnerMarketCurator(chainId, market);
+
   const strategy: Strategy = {
     id: market.morphoMarketId,
     chainId,
     correlated: market.correlated,
-    ...(ev ? { curator: ev.curator } : {}),
+    ...(curator ? { curator } : {}),
     collateral,
     loan: {
       address: market.loanToken.address,
@@ -341,7 +346,10 @@ export function toStrategy(cm: ComposedMarket, snapshot: ComposedSnapshot): Stra
       // `/{chainId}/strategies/{id}/{collateralSymbol}-{loanSymbol}` (see the app's
       // scripts/prerender-routes.mjs, which writes one static page per market at that path).
       app: `${APP_BASE}/${chainId}/strategies/${market.morphoMarketId}/${market.collateralToken.symbol}-${market.loanToken.symbol}`,
-      market: `https://app.morpho.org/ethereum/market/${market.morphoMarketId}`,
+      // Morpho's current market URL is `/{chain}/variable/{id}/{loan}-{collateral}` (the old
+      // `/ethereum/market/{id}` form 404s, on every chain); a partner market links to its own
+      // page (longbow.cash / NetNet Credit) instead — a vault's synthetic id has no Morpho page.
+      market: marketUrl(chainId, market),
       ...(info?.website ? { yieldSource: info.website } : {}),
     },
   };

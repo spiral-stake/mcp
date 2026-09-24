@@ -84,8 +84,9 @@ export interface Strategy {
   chainId: number;
   correlated: boolean;
   // Who curates the market the collateral is posted on. Present only where a strategy runs on a
-  // partner-curated market (equity vaults: "Longbow" / "NetNet Credit") — it is what distinguishes
-  // two vaults on the same ticker. Absent on Spiral's own loop markets.
+  // partner-curated market ("Longbow" / "NetNet Credit": the equity vaults' stock markets and
+  // Longbow's perp markets) — it is what distinguishes two vaults on the same ticker. Absent on
+  // Spiral's own markets.
   curator?: string;
 
   collateral: StrategyCollateral;

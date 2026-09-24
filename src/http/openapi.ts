@@ -35,7 +35,7 @@ export function openApiSpec() {
         nullable: true,
         example: "Longbow",
         description:
-          "Who curates the market the collateral is posted on. Present only on partner-curated markets (equity vaults: Longbow / NetNet Credit) — distinguishes two vaults on the same ticker. Absent on Spiral's own loop markets.",
+          "Who curates the market the collateral is posted on. Present only on partner-curated markets (Longbow / NetNet Credit: the equity vaults' stock markets and Longbow's perp markets) — distinguishes two vaults on the same ticker. Absent on Spiral's own markets.",
       },
       collateral: {
         type: "object",

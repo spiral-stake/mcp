@@ -16,6 +16,7 @@ import { readMarkets } from "../../src/data/markets.ts";
 import { buildEquityMarkets } from "../../src/core/equity.ts";
 import { equityVaultsFor } from "../../src/data/equityVaults.ts";
 import { buildStrategies } from "../../src/core/strategy.ts";
+import { partnerMarketCurator, NETNET_CREDIT_URL } from "../../src/data/robinhoodMarkets.ts";
 import { TokenCategory } from "../../src/types/index.ts";
 
 const CHAIN = 4663;
@@ -134,7 +135,21 @@ describe("equity vaults on /v1/strategies — curator + description", () => {
       expect(s.curator).toBe(v.curator);
       expect(s.collateral.description).toContain(`${v.curator}'s Morpho market`);
     }
-    for (const s of strategies.filter((s) => !s.id.startsWith("equity-"))) expect(s).not.toHaveProperty("curator");
+    // Non-vault strategies: Longbow's perp markets name Longbow; Spiral's own markets carry no key.
+    const loops = composeSnapshot(CHAIN).markets.map((cm) => cm.market);
+    for (const s of strategies.filter((s) => !s.id.startsWith("equity-"))) {
+      const expected = partnerMarketCurator(CHAIN, loops.find((m) => m.morphoMarketId === s.id)!);
+      if (expected) expect(s.curator).toBe(expected);
+      else expect(s).not.toHaveProperty("curator");
+    }
+  });
+
+  it("links a vault to its stock market's own page, never to a Morpho URL built from its synthetic id", () => {
+    const { strategies } = buildStrategies(CHAIN);
+    const byCurator = (c: string) => strategies.filter((s) => s.id.startsWith("equity-") && s.curator === c);
+    for (const s of byCurator("Longbow")) expect(s.links?.market).toBe(`https://www.longbow.cash/borrow/${s.collateral.symbol}`);
+    for (const s of byCurator("NetNet Credit")) expect(s.links?.market).toBe(NETNET_CREDIT_URL);
+    for (const s of strategies) expect(s.links?.market).not.toContain("equity-");
   });
 
   it("tells the two NVDA vaults apart", () => {

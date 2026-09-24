@@ -36,8 +36,8 @@ The single contract the `../mcp` service produces and both the app (llms.txt/JSO
   "id": "0xMORPHO_MARKET_ID",
   "chainId": 1,
   "correlated": true,                 // collateral↔loan correlated (leverage-relevant fact)
-  "curator": "Longbow",               // ONLY on partner-curated markets (equity vaults: Longbow | NetNet Credit);
-                                      // the fact that tells two same-ticker vaults apart. Absent on Spiral loops.
+  "curator": "Longbow",               // ONLY on partner-curated markets (Longbow | NetNet Credit: the equity vaults'
+                                      // stock markets, Longbow's perp markets); tells two same-ticker vaults apart.
 
   "collateral": {
     "address": "0x…", "symbol": "sUSDe", "name": "…", "decimals": 18,
@@ -114,7 +114,11 @@ The single contract the `../mcp` service produces and both the app (llms.txt/JSO
     "exitLiquidity": { "asOf": "2026-07-06T06:00:00Z", "staleAfterSec": 86400 }   // 12h refresh, 24h grace
   },
 
-  "links": { "app": "https://…/strategy/…", "market": "https://…", "yieldSource": "https://…" }
+  "links": {
+    "app": "https://app.spiralstake.xyz/{chainId}/strategies/{id}/{collateral}-{loan}",
+    "market": "https://app.morpho.org/{chain}/variable/{id}/{loan}-{collateral}#market",   // partner market → its own page (longbow.cash / NetNet Credit)
+    "yieldSource": "https://…"
+  }
 }
 ```
 

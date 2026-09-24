@@ -93,6 +93,10 @@ describe("strategy composition (seeded fixture)", () => {
     // ABSENT (not null) on Spiral's own loop markets.
     expect(s.collateral.description).toBe(registries.collateralTokens[m0.collateralToken.address].description);
     expect(s).not.toHaveProperty("curator");
+    // Morpho's live URL form (the old /ethereum/market/{id} 404s).
+    expect(s.links?.market).toBe(
+      `https://app.morpho.org/ethereum/variable/${m0.morphoMarketId}/${m0.loanToken.symbol.toLowerCase()}-${m0.collateralToken.symbol.toLowerCase()}#market`,
+    );
   });
 
   it("builds the leverage ladder + defaultLeverage with the verbatim leverage.ts", () => {
