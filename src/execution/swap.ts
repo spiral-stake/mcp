@@ -9,11 +9,11 @@
 // returned here: each venue reports it in its own (unreliable) convention, so callers derive it from
 // the app's own token prices instead — one formula for every venue.
 import { getJson, postJson, UpstreamError } from "../sources/http.ts";
+import { KYBERSWAP_URL, KYBER_HEADERS } from "../sources/kyberswap.ts";
 import { getMainnetClient } from "../sources/onchain.ts";
 import { captureError } from "../config/sentry.ts";
 import { env } from "../config/env.ts";
 
-const KYBERSWAP_URL = "https://aggregator-api.kyberswap.com";
 const OPENOCEAN_URL = "https://open-api-pro.openocean.finance";
 const PENDLE_SWAP_URL = "https://api-v2.pendle.finance/core";
 const ROBINHOOD_CHAIN_ID = 4663;
@@ -286,6 +286,7 @@ async function callKyberswap(
   try {
     const routes = await getJson<KyberRoutes>(`${KYBERSWAP_URL}/${chainName}/api/v1/routes?${q}`, {
       source: "kyberswap-routes",
+      headers: KYBER_HEADERS,
       retries: KYBER_ATTEMPTS,
       timeoutMs: 20_000,
     });
@@ -297,7 +298,7 @@ async function callKyberswap(
     const built = await postJson<{ data?: KyberBuilt }>(
       `${KYBERSWAP_URL}/${chainName}/api/v1/route/build`,
       { ...routeData, sender: receiver, recipient: receiver, slippageTolerance: slippage * 10000 },
-      { source: "kyberswap-build", retries: KYBER_ATTEMPTS, timeoutMs: 20_000 },
+      { source: "kyberswap-build", headers: KYBER_HEADERS, retries: KYBER_ATTEMPTS, timeoutMs: 20_000 },
     );
     res = built?.data;
   } catch (e) {

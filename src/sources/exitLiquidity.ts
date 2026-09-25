@@ -21,9 +21,9 @@
 //  - a chain with no CHAIN entry is not measured (never quoted against the wrong chain).
 import { env } from "../config/env.ts";
 import { equityVaultsFor } from "../data/equityVaults.ts";
+import { KYBERSWAP_URL as KYBER_BASE, KYBER_HEADERS } from "./kyberswap.ts";
 import type { CollateralToken, CollateralTokenInfo, Market } from "../types/index.ts";
 
-const KYBER_BASE = "https://aggregator-api.kyberswap.com";
 const CG_URL = "https://api.coingecko.com/api/v3/simple/price";
 
 // Per-chain aggregator routing. Slug mirrors the app's chainConfig[chainId].name.toLowerCase()
@@ -77,7 +77,7 @@ interface FetchResult {
   json?: any;
   transient?: true;
 }
-async function fetchRetry(url: string, headers: Record<string, string>): Promise<FetchResult> {
+async function fetchRetry(url: string, headers: Readonly<Record<string, string>>): Promise<FetchResult> {
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
@@ -105,7 +105,7 @@ async function quoteExit(chainId: number, tokenIn: string, dec: number, tokenAmo
   const cfg = CHAIN[chainId]!; // presence guaranteed by fetchExitLiquidity's chain guard
   const amountIn = toBaseUnits(tokenAmount, dec).toString();
   const url = `${KYBER_BASE}/${cfg.slug}/api/v1/routes?tokenIn=${tokenIn}&tokenOut=${cfg.stable}&amountIn=${amountIn}&gasInclude=false`;
-  const r = await fetchRetry(url, { "x-client-id": "spiralstake" });
+  const r = await fetchRetry(url, KYBER_HEADERS);
   if (r.transient) return { transient: true };
   if (r.status === 400 || r.status === 404 || r.status === 422) return { noRoute: true };
   if (r.status !== 200) return { transient: true };
