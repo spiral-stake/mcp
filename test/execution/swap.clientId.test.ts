@@ -5,7 +5,8 @@
 // constant (src/sources/kyberswap.ts) that the exit-liquidity sweep uses too.
 import { vi, describe, it, expect, beforeEach } from "vitest";
 
-vi.mock("../../src/config/env.ts", () => ({ env: { FEE_RECEIVER: undefined } }));
+// The receiver is the treasury SAFE: a fee-bearing swap is refused without it (see swap.receiver.test.ts).
+vi.mock("../../src/config/env.ts", () => ({ env: { FEE_RECEIVER: "0x9ced716f16651b69D5167C82003690621e8F90b9" } }));
 vi.mock("../../src/sources/http.ts", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../../src/sources/http.ts")>()),
   getJson: vi.fn(),

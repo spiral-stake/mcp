@@ -13,6 +13,7 @@ import { KYBERSWAP_URL, KYBER_HEADERS } from "../sources/kyberswap.ts";
 import { getMainnetClient } from "../sources/onchain.ts";
 import { captureError } from "../config/sentry.ts";
 import { env } from "../config/env.ts";
+import { isTreasurySafe, TREASURY_SAFE } from "../config/treasury.ts";
 
 const OPENOCEAN_URL = "https://open-api-pro.openocean.finance";
 const PENDLE_SWAP_URL = "https://api-v2.pendle.finance/core";
@@ -84,7 +85,9 @@ export async function getSwapData(
   // Used ONLY to sanity-check an OpenOcean-only quote (KyberSwap down) — see MAX_OO_ONLY_DEVIATION_BPS.
   referenceOut?: bigint,
 ): Promise<SwapResult> {
-  const feeReceiver = env.FEE_RECEIVER;
+  // Fail-closed: a fee-bearing swap without the treasury SAFE as receiver is refused, never built with
+  // the fee silently dropped (feeBps=0 callers — close, increase_leverage — need no receiver).
+  const feeReceiver = feeBps > 0 ? requireFeeReceiver() : undefined;
 
   if (isPt) {
     const body: Record<string, unknown> = {
@@ -130,6 +133,19 @@ export async function getSwapData(
     return pickBestSwap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, feeBps, fee, referenceOut);
   }
   return callKyberswap(chainId, receiver, tokenIn, tokenOut, amountIn, slippage, fee, feeBps);
+}
+
+// The receiver every fee-bearing swap must carry. Anything else (unset, malformed, another address)
+// would route protocol revenue to nobody or to the wrong wallet, so the swap is refused instead.
+export function requireFeeReceiver(): string {
+  const r = env.FEE_RECEIVER;
+  if (!isTreasurySafe(r)) {
+    throw new Error(
+      `Swap fee receiver misconfigured: FEE_RECEIVER=${r ?? "<unset>"} is not the treasury SAFE ${TREASURY_SAFE}. ` +
+        "Refusing to build a fee-bearing swap.",
+    );
+  }
+  return r as string;
 }
 
 // KyberSwap is the baseline aggregator; OpenOcean is the challenger, taken only when it wins by a

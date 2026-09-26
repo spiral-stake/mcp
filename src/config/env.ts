@@ -2,6 +2,7 @@
 // environment only — never checked in, never passed on the wire. A `.env` (if present)
 // is loaded once at startup via Node's built-in support.
 import { z } from "zod";
+import { isTreasurySafe, TREASURY_SAFE } from "./treasury.ts";
 
 // Node 20.6+ supports `--env-file`; we also load a local .env manually so `tsx`/tests
 // pick it up without a flag. Kept dependency-free (no dotenv).
@@ -26,6 +27,11 @@ function loadDotEnv() {
   }
 }
 loadDotEnv();
+
+const feeReceiverSchema = z
+  .string({ required_error: "FEE_RECEIVER is required: the swap fee would otherwise be charged to nobody" })
+  .regex(/^0x[0-9a-fA-F]{40}$/, "FEE_RECEIVER must be a 20-byte hex address")
+  .refine(isTreasurySafe, { message: `FEE_RECEIVER must be the treasury SAFE ${TREASURY_SAFE}` });
 
 const schema = z.object({
   PORT: z.coerce.number().int().positive().default(8787),
@@ -69,8 +75,11 @@ const schema = z.object({
   SENTRY_ENVIRONMENT: z.string().default("production"),
 
   // Execution (C): fee receiver for the swap fee — 5 bps correlated / 25 bps non-correlated, see
-  // execution/swap.ts (mirrors the app's VITE_FEE_RECEIVER). Absent → no fee charged, as the app.
-  FEE_RECEIVER: z.string().optional(),
+  // execution/swap.ts (mirrors the app's VITE_FEE_RECEIVER). Fund-critical and fail-CLOSED: it must be
+  // set and must be the treasury SAFE (TREASURY_SAFE), or the process refuses to boot. A missing or
+  // mistyped value used to charge no fee at all, silently. Tests run without it (vitest sets
+  // NODE_ENV=test); execution/swap.ts still refuses a fee-bearing swap without a valid receiver.
+  FEE_RECEIVER: process.env.NODE_ENV === "test" ? z.string().optional() : feeReceiverSchema,
 
   // OpenOcean aggregator (mainnet only) — raced against KyberSwap for best execution. The Pro
   // endpoint needs an `apikey` header. Presence of this key is the on/off switch: absent → KyberSwap
