@@ -174,6 +174,11 @@ export function __resetTvlScanCache(): void {
   decimalsCache.clear();
 }
 
+/** Every wallet that has ever opened a Spiral position on `chainId` (lowercase), from the proxy scan. */
+export async function discoverChainUsers(chainId: number, reads: TvlReads = viemTvlReads(chainId)): Promise<string[]> {
+  return [...(await discoverUsers(chainId, reads))];
+}
+
 async function discoverUsers(chainId: number, reads: TvlReads): Promise<Set<string>> {
   const flashLeverage = (readAddresses(chainId).flashLeverageAddress as string).toLowerCase();
   let state = discovery.get(chainId);

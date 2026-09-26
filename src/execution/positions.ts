@@ -114,7 +114,24 @@ export async function readManagePosition(chainId: number, user: string, id: numb
   };
 }
 
-export async function getUserPositions(chainId: number, user: string): Promise<LeveragePositionView[]> {
+// One on-chain position with everything read from the contract, at full precision. The public
+// `LeveragePositionView` (below) is a rounded projection of this; the portfolio read (portfolio.ts)
+// derives the app's figures from these raw values so its rounding matches the app's, not ours.
+export interface RawUserPosition {
+  id: number; // index into the user's on-chain position array
+  open: boolean;
+  userProxy: string;
+  market: Market;
+  amountDepositedRaw: bigint; // contract's deposit basis, loan-token raw units
+  amountReturnedRaw: bigint; // contract's returned amount, loan-token raw units
+  collateralRaw: bigint; // Morpho collateral, collateral raw units
+  borrowShares: bigint;
+  loanRaw: bigint; // debt, loan-token raw units (borrow shares valued now)
+}
+
+// Every position the wallet holds on a CONFIGURED market, in on-chain order (index = id). Positions
+// on markets no longer in the feed are skipped, exactly as the app skips them.
+export async function readUserPositionsRaw(chainId: number, user: string): Promise<RawUserPosition[]> {
   const flashLeverageAddress = readAddresses(chainId).flashLeverageAddress as `0x${string}`;
   const client = getClient(chainId);
 
@@ -154,64 +171,83 @@ export async function getUserPositions(chainId: number, user: string): Promise<L
     allowFailure: false,
   })) as unknown as bigint[];
 
-  const views = pairs.map(({ pos, id, market }, i) => {
+  return pairs.map(({ pos, id, market }, i) => {
     const mp = morphoPositions[i] ?? { borrowShares: 0n, collateral: 0n };
-    const price = market.collateralTokenValueInLoanToken; // collateral -> loan units
-    const amountLeveragedCollateral = formatUnits(mp.collateral, market.collateralToken.decimals);
-    const amountLoan = formatUnits(loanRaw[i] ?? 0n, market.loanToken.decimals);
-
-    const leveragedInLoan = amountLeveragedCollateral.multipliedBy(price);
-    const equityInLoan = leveragedInLoan.minus(amountLoan);
-    const netCollateral = price.isZero() ? BigNumber(0) : amountLeveragedCollateral.minus(amountLoan.div(price));
-    const ltv = leveragedInLoan.isZero() ? BigNumber(0) : amountLoan.multipliedBy(100).div(leveragedInLoan);
-    const currentLeverage = equityInLoan.isZero() ? BigNumber(0) : leveragedInLoan.div(equityInLoan);
-    const liquidated = pos.open && amountLeveragedCollateral.isZero();
-    const netBorrowApy = BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2);
-    // Effective collateral yield = base APY + collateral-side Merkl incentive, exactly as compose.ts
-    // sizes defaultLeverageApy and strategy.ts sizes the ladder. With the bare base APY a position
-    // contradicted /v1/strategies at the same LTV on every incentive-carrying market (syrupUSDG read
-    // 13% against a 38% ladder; USDe, whose yield is all incentive, read deeply negative).
-    const collateralApy = BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy).toFixed(2);
-
-    // Exit health for THIS position: a one-shot close swaps the full leveraged collateral, so the
-    // notional to compare against the market's clean-exit depth is the whole position, not equity.
-    const info = market.collateralToken.info;
-    const unwindSizeUsd = amountLeveragedCollateral
-      .multipliedBy(market.collateralToken.valueInUsd)
-      .toNumber();
-    const cleanSizeUsd = exitLiquidityCleanSizeUsd(info);
-
     return {
       id,
-      positionId: `${chainId}-${market.morphoMarketId}-${id}`,
-      chainId,
-      strategyId: market.morphoMarketId,
       open: pos.open,
-      liquidated,
-      collateralSymbol: market.collateralToken.symbol,
-      loanSymbol: market.loanToken.symbol,
-      amountLeveragedCollateral: amountLeveragedCollateral.toFixed(6, BigNumber.ROUND_DOWN),
-      netCollateral: netCollateral.toFixed(6, BigNumber.ROUND_DOWN),
-      amountLoan: amountLoan.toFixed(6, BigNumber.ROUND_DOWN),
-      ltvPct: ltv.toFixed(2),
-      liquidationLtvPct: BigNumber(market.liqLtv).toFixed(2),
-      ltvHeadroomPct: BigNumber(market.liqLtv).minus(ltv).toFixed(2),
-      currentLeverage: currentLeverage.toFixed(2),
-      netValueUsd: equityInLoan.multipliedBy(market.loanToken.valueInUsd).toFixed(2),
-      amountDepositedInLoanToken: formatUnits(pos.amountDepositedInLoanToken, market.loanToken.decimals).toFixed(6, BigNumber.ROUND_DOWN),
-      // Honest signed carry (pass `true`, not market.correlated): a perp reads as its typically-negative
-      // financing carry, matching /v1/strategies' leverageApyPct and the simulate preview rather than the
-      // app's sign-flipped "Borrow APY" display. Identical for a correlated loop.
-      currentLeverageApyPct: calcLeverageApy(true, collateralApy, netBorrowApy, ltv.toFixed(2)),
-      exitLiquidity: {
-        tier: exitLiquidityTier(info),
-        cleanExitSize: exitLiquiditySize(info),
-        unwindSizeUsd: Number(unwindSizeUsd.toFixed(2)),
-        exceedsCleanExitSize: unwindSizeUsd > cleanSizeUsd,
-        noSwapRoute: !!info?.noSwapRoute,
-      },
+      userProxy: pos.userProxy,
+      market,
+      amountDepositedRaw: pos.amountDepositedInLoanToken,
+      amountReturnedRaw: pos.amountReturnedInLoanToken,
+      collateralRaw: mp.collateral,
+      borrowShares: mp.borrowShares,
+      loanRaw: loanRaw[i] ?? 0n,
     };
   });
+}
 
-  return views.reverse(); // newest first, matching the app
+// The agent/partner projection of one raw position (rounded, string-typed).
+export function toPositionView(chainId: number, p: RawUserPosition): LeveragePositionView {
+  const { id, market } = p;
+  const price = market.collateralTokenValueInLoanToken; // collateral -> loan units
+  const amountLeveragedCollateral = formatUnits(p.collateralRaw, market.collateralToken.decimals);
+  const amountLoan = formatUnits(p.loanRaw, market.loanToken.decimals);
+
+  const leveragedInLoan = amountLeveragedCollateral.multipliedBy(price);
+  const equityInLoan = leveragedInLoan.minus(amountLoan);
+  const netCollateral = price.isZero() ? BigNumber(0) : amountLeveragedCollateral.minus(amountLoan.div(price));
+  const ltv = leveragedInLoan.isZero() ? BigNumber(0) : amountLoan.multipliedBy(100).div(leveragedInLoan);
+  const currentLeverage = equityInLoan.isZero() ? BigNumber(0) : leveragedInLoan.div(equityInLoan);
+  const liquidated = p.open && amountLeveragedCollateral.isZero();
+  const netBorrowApy = BigNumber(market.borrowApy).minus(market.borrowIncentiveApy).toFixed(2);
+  // Effective collateral yield = base APY + collateral-side Merkl incentive, exactly as compose.ts
+  // sizes defaultLeverageApy and strategy.ts sizes the ladder. With the bare base APY a position
+  // contradicted /v1/strategies at the same LTV on every incentive-carrying market (syrupUSDG read
+  // 13% against a 38% ladder; USDe, whose yield is all incentive, read deeply negative).
+  const collateralApy = BigNumber(market.collateralToken.apy).plus(market.collateralIncentiveApy).toFixed(2);
+
+  // Exit health for THIS position: a one-shot close swaps the full leveraged collateral, so the
+  // notional to compare against the market's clean-exit depth is the whole position, not equity.
+  const info = market.collateralToken.info;
+  const unwindSizeUsd = amountLeveragedCollateral
+    .multipliedBy(market.collateralToken.valueInUsd)
+    .toNumber();
+  const cleanSizeUsd = exitLiquidityCleanSizeUsd(info);
+
+  return {
+    id,
+    positionId: `${chainId}-${market.morphoMarketId}-${id}`,
+    chainId,
+    strategyId: market.morphoMarketId,
+    open: p.open,
+    liquidated,
+    collateralSymbol: market.collateralToken.symbol,
+    loanSymbol: market.loanToken.symbol,
+    amountLeveragedCollateral: amountLeveragedCollateral.toFixed(6, BigNumber.ROUND_DOWN),
+    netCollateral: netCollateral.toFixed(6, BigNumber.ROUND_DOWN),
+    amountLoan: amountLoan.toFixed(6, BigNumber.ROUND_DOWN),
+    ltvPct: ltv.toFixed(2),
+    liquidationLtvPct: BigNumber(market.liqLtv).toFixed(2),
+    ltvHeadroomPct: BigNumber(market.liqLtv).minus(ltv).toFixed(2),
+    currentLeverage: currentLeverage.toFixed(2),
+    netValueUsd: equityInLoan.multipliedBy(market.loanToken.valueInUsd).toFixed(2),
+    amountDepositedInLoanToken: formatUnits(p.amountDepositedRaw, market.loanToken.decimals).toFixed(6, BigNumber.ROUND_DOWN),
+    // Honest signed carry (pass `true`, not market.correlated): a perp reads as its typically-negative
+    // financing carry, matching /v1/strategies' leverageApyPct and the simulate preview rather than the
+    // app's sign-flipped "Borrow APY" display. Identical for a correlated loop.
+    currentLeverageApyPct: calcLeverageApy(true, collateralApy, netBorrowApy, ltv.toFixed(2)),
+    exitLiquidity: {
+      tier: exitLiquidityTier(info),
+      cleanExitSize: exitLiquiditySize(info),
+      unwindSizeUsd: Number(unwindSizeUsd.toFixed(2)),
+      exceedsCleanExitSize: unwindSizeUsd > cleanSizeUsd,
+      noSwapRoute: !!info?.noSwapRoute,
+    },
+  };
+}
+
+export async function getUserPositions(chainId: number, user: string): Promise<LeveragePositionView[]> {
+  const raw = await readUserPositionsRaw(chainId, user);
+  return raw.map((p) => toPositionView(chainId, p)).reverse(); // newest first, matching the app
 }

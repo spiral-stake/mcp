@@ -55,6 +55,11 @@ export const POLICY = {
   // User discovery is incremental (FlashLeverage nonce-derived proxies); the position multicalls
   // are a few RPC round-trips. Same clock as the prices + collateral values it is valued with.
   tvl: { refreshEverySec: 5 * M, staleAfterSec: 15 * M } satisfies WarmPolicy,
+
+  // Ops portfolio (every wallet's positions, app-shaped). Computed ON DEMAND by the keyed ops read,
+  // not by the warmer: nothing runs while nobody is looking. Served from the store within
+  // refreshEverySec; recomputed (coalesced) past it; last-good with `stale` past staleAfterSec.
+  portfolio: { refreshEverySec: 1 * M, staleAfterSec: 3 * M } satisfies WarmPolicy,
 } as const;
 
 // Hard bound on serving last-good data to the APP. The store keeps last-good indefinitely so a
@@ -86,4 +91,5 @@ export const KEYS = {
   exitLiquidity: (chainId: number) => `exitLiquidity:${chainId}`,
   equityMarkets: (chainId: number) => `equity:markets:${chainId}`,
   tvl: (chainId: number) => `tvl:${chainId}`,
+  portfolio: (chainId: number) => `portfolio:${chainId}`,
 } as const;

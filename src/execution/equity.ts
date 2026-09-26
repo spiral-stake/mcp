@@ -568,6 +568,10 @@ export interface EquityPositionView {
     collateralUsd: string;
     priceUsd: string;
     debtUsdg: string; // USDG owed on the stock leg
+    // Raw units (collateral token / USDG), so a consumer that needs the app's full precision (the
+    // portfolio read) can derive from the same read instead of re-reading the chain.
+    collateralRaw: string;
+    debtRaw: string;
     ltvPct: string;
     liquidationLtvPct: string;
     ltvHeadroomPct: string;
@@ -591,23 +595,33 @@ export interface EquityPositionView {
 }
 
 /** A wallet's open equity vaults on `chainId`, plus its plain loops with the vaults' yield legs removed. */
+// Pre-fetched inputs a caller may supply when it already holds them (the portfolio read reads the
+// chain once for every wallet and the dashboard rows once per chain): `positions` are the wallet's
+// loops in the shape getUserPositions returns, `tags` the dashboard's positionId -> equityMarketId map.
+export interface EquityResolveOpts {
+  positions?: LeveragePositionView[];
+  tags?: Map<string, string>;
+}
+
 export async function getUserEquityPositions(
   chainId: number,
   user: string,
+  opts: EquityResolveOpts = {},
 ): Promise<{ equityPositions: EquityPositionView[]; positions: LeveragePositionView[] }> {
-  const { equityPositions, positions } = await resolveUserEquity(chainId, user);
+  const { equityPositions, positions } = await resolveUserEquity(chainId, user, opts);
   return { equityPositions, positions };
 }
 
 async function resolveUserEquity(
   chainId: number,
   user: string,
+  opts: EquityResolveOpts = {},
 ): Promise<{ equityPositions: EquityPositionView[]; positions: LeveragePositionView[]; allPositions: LeveragePositionView[] }> {
-  const positions = await getUserPositions(chainId, user);
+  const positions = opts.positions ?? (await getUserPositions(chainId, user));
   const loops = composeSnapshot(chainId).markets.map((m) => m.market);
   const vaults = buildEquityMarkets(chainId, loops);
   if (vaults.length === 0) return { equityPositions: [], positions, allPositions: positions };
-  const tags = await fetchVaultTags(chainId, user);
+  const tags = opts.tags ?? (await fetchVaultTags(chainId, user));
   const tagOf = (p: LeveragePositionView) => tags.get(`${user}-${p.strategyId}-${p.id}`.toLowerCase());
 
   const flashLeverageAddress = readAddresses(chainId).flashLeverageAddress as `0x${string}`;
@@ -667,6 +681,8 @@ async function resolveUserEquity(
         collateralUsd: collateralUsd.toFixed(2),
         priceUsd: BigNumber(ev.stockPriceUsd).toFixed(4),
         debtUsdg: debtUsdg.toFixed(6, BigNumber.ROUND_DOWN),
+        collateralRaw: mp.collateral.toString(),
+        debtRaw: (debts[i] ?? 0n).toString(),
         ltvPct: ltv.toFixed(2),
         liquidationLtvPct: BigNumber(ev.liqLtvPct).toFixed(2),
         ltvHeadroomPct: BigNumber(ev.liqLtvPct).minus(ltv).toFixed(2),

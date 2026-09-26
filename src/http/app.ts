@@ -26,6 +26,7 @@ import { openApiSpec } from "./openapi.ts";
 import { rateLimit } from "./rateLimit.ts";
 import { attachPartner } from "./partnerAuth.ts";
 import { partnerApi } from "./partnerRoutes.ts";
+import { opsApi } from "./opsRoutes.ts";
 import type { Partner } from "../partners/registry.ts";
 import serverManifest from "../../server.json" with { type: "json" };
 import { captureError } from "../config/sentry.ts";
@@ -183,6 +184,9 @@ app.all("/mcp", async (c) => {
 
 // ── v1: partner integration API (keyed) — the neobank-facing REST surface for simulate/build ──
 app.route("/v1/partner", partnerApi);
+
+// ── v1: ops API (keyed, `ops` tier only) — every wallet's portfolio as the app renders it ──
+app.route("/v1/ops", opsApi);
 
 // ── v1: strategies (agents + app) ──
 app.get("/v1/strategies", (c) => {

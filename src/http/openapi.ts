@@ -312,6 +312,7 @@ export function openApiSpec() {
     tags: [
       { name: "Public", description: "Open read endpoints — no key required." },
       { name: "Partner", description: "Keyed integration API — Authorization: Bearer <key>." },
+      { name: "Ops", description: "Internal monitoring API — Authorization: Bearer <key> on the `ops` tier." },
     ],
     paths: {
       "/health": {
@@ -479,6 +480,29 @@ export function openApiSpec() {
             chainIdQuery,
           ],
           responses: { "200": { description: "Positions", content: { "application/json": { schema: { type: "object", properties: { chainId: { type: "integer" }, userAddress: { type: "string" }, positions: { type: "array", items: { type: "object" }, description: "Plain loop positions; a vault's yield loop(s) are excluded and listed under equityPositions." }, equityPositions: { type: "array", items: { type: "object" } } } } } } }, ...partnerErr },
+        },
+      },
+      "/v1/ops/portfolios": {
+        get: {
+          tags: ["Ops"],
+          summary: "Every wallet's positions on a chain, shaped exactly as the app's Portfolio page renders them",
+          description:
+            "Internal monitoring surface. Requires a key on the `ops` tier. Per wallet: the header totals, open loops, open equity vaults, closed/liquidated positions (closed vaults re-skinned as the vault), and dashboard rows with nothing behind them on chain. Values are unformatted decimal strings (format with the app's displayTokenAmount). `dbDrift` flags dashboard/chain disagreements the app silently self-heals. Cached 60s; `stale`/`degraded` flag older numbers.",
+          security: bearer,
+          parameters: [chainIdQuery],
+          responses: { "200": { description: "Portfolios", content: { "application/json": { schema: { type: "object", properties: { chainId: { type: "integer" }, asOf: { type: "string" }, stale: { type: "boolean" }, degraded: { type: "boolean" }, computedAt: { type: "string" }, counts: { type: "object" }, users: { type: "array", items: { type: "object" } } } } } } }, ...partnerErr },
+        },
+      },
+      "/v1/ops/portfolio/{address}": {
+        get: {
+          tags: ["Ops"],
+          summary: "One wallet's portfolio, app-shaped, computed live",
+          security: bearer,
+          parameters: [
+            { name: "address", in: "path", required: true, schema: { type: "string", pattern: "^0x[0-9a-fA-F]{40}$" }, description: "Wallet address." },
+            chainIdQuery,
+          ],
+          responses: { "200": { description: "Portfolio", content: { "application/json": { schema: { type: "object" } } } }, ...partnerErr },
         },
       },
       "/v1/prices/chart": {

@@ -57,6 +57,10 @@ const schema = z.object({
   // Dashboard service — source of Spiral's own Merkl (Encompassing) campaigns, merged into the
   // collateral-side incentive of their market (sources/merkl.ts). Empty string disables the merge.
   DASHBOARD_URL: z.string().default("https://dashboard.spiralstake.xyz"),
+  // Horizon (days) of the app's "Projected Yield" column when the collateral has no maturity — MUST
+  // mirror v2-client's VITE_DEFAULT_DAYS (utils/getNetYieldUsd.ts DEFAULT_DAYS), or the ops portfolio
+  // projects a different figure than the user's own card.
+  PORTFOLIO_DEFAULT_DAYS: z.coerce.number().int().positive().default(365),
 
   MAINNET_RPC_URL: z.string().url().optional(),
   ROBINHOOD_RPC_URL: z.string().url().optional().or(z.literal("")),
