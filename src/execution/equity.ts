@@ -130,6 +130,10 @@ const FLASH_LEVERAGE_DELEVERAGE_ABI = [
 // The app pins equity-vault slippage to 1% (StrategyPage.initialize; EquityPositionCard.handleClose).
 const EQUITY_SLIPPAGE = 0.01;
 const MAX_SLIPPAGE = 0.01;
+// The stock swap may fill at most this far below the oracle price. Min-out only bounds slippage from
+// the quote, not the quote itself — and on a thin stock pool the aggregator still returns a route
+// that overpays by several percent. Mirrors the app (utils/equityVaultTx.ts).
+const MAX_STOCK_SWAP_DEVIATION_BPS = 200n;
 // Contract-side safety on the stock borrow (FlashLeverageRouter.LIQUIDATION_BUFFER): the borrow may
 // not exceed collateral × (LLTV − 0.25%). We check the same bound off-chain so a build never encodes
 // a borrow the router would reject.
@@ -292,10 +296,20 @@ async function prepareDeposit(input: SimulateEquityDepositInput): Promise<Prepar
 
   // Leg 1a: swap USDG → stock, delivered to the router (which supplies it as the user's collateral).
   // Price exposure, not a yield loop, so it carries the non-correlated fee.
+  const stockReferenceOut = oracleReferenceOut(equityMarket, usdg.address, amountInRaw, stock.address);
   const stockSwap = await getSwapData(
     chainId, false, router, usdg.address, stock.address, amountInRaw, slippage, NON_CORRELATED_SWAP_FEE_BPS,
-    oracleReferenceOut(equityMarket, usdg.address, amountInRaw, stock.address),
+    stockReferenceOut,
   );
+  if (
+    stockReferenceOut !== undefined &&
+    stockSwap.amountOut < (stockReferenceOut * (10_000n - MAX_STOCK_SWAP_DEVIATION_BPS)) / 10_000n
+  ) {
+    throw new Error(
+      `The ${usdg.symbol} → ${stock.symbol} swap fills more than ${Number(MAX_STOCK_SWAP_DEVIATION_BPS) / 100}% below the ` +
+        `oracle price at this size — deposit a smaller amount.`,
+    );
+  }
   const stockMinOut = minOut(stockSwap.amountOut, slippage);
   const stockWhole = formatUnits(stockMinOut, stock.decimals);
   const stockPrice = BigNumber(ev.stockPriceUsd);

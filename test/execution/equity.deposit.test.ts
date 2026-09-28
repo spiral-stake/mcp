@@ -157,6 +157,21 @@ describe("buildEquityDepositTx — batch + equityEntry parity", () => {
     await expect(simulateEquityDeposit({ chainId: CHAIN, strategyId: spy().id, amount: "10000" })).rejects.toThrow(/yield market has 1000\.00 USDG borrowable/);
   });
 
+  it("refuses a stock swap that fills more than 2% below the oracle price", async () => {
+    // A thin pool: the aggregator still returns a route, but 50 SPY's worth of USDG buys only 48.
+    const quoteAt = (pctOfOracle: bigint) =>
+      vi.mocked(getSwapData).mockImplementation(async (_chain, _isPt, _receiver, _tokenIn, tokenOut, amountIn) => {
+        const inRaw = BigInt(amountIn);
+        const fair = (inRaw * 10n ** 18n) / (BigInt(STOCK_PRICE) * 10n ** 6n);
+        const amountOut = tokenOut.toLowerCase() === STOCK_ADDR() ? (fair * pctOfOracle) / 100n : inRaw;
+        return { swapData: { extRouter: "0x0000000000000000000000000000000000000001", extCalldata: "0x01" }, amountOut, source: "KyberSwap" as const };
+      });
+    quoteAt(96n);
+    await expect(buildEquityDepositTx({ chainId: CHAIN, strategyId: spy().id, amount: "10000", userAddress: USER })).rejects.toThrow(/more than 2% below the oracle price/);
+    quoteAt(98n); // exactly at the bound: allowed
+    await expect(buildEquityDepositTx({ chainId: CHAIN, strategyId: spy().id, amount: "10000", userAddress: USER })).resolves.toBeDefined();
+  });
+
   it("rejects a loop id and an unknown id with distinct messages", async () => {
     await expect(simulateEquityDeposit({ chainId: CHAIN, strategyId: spy().yieldMarketId, amount: "10" })).rejects.toThrow(/leverage strategy, not an equity vault/);
     await expect(simulateEquityDeposit({ chainId: CHAIN, strategyId: "equity-0xnope", amount: "10" })).rejects.toThrow(/Unknown equity vault/);

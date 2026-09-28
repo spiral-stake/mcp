@@ -82,7 +82,7 @@ describe("buildEquityMarkets — collateral token info", () => {
       expect(info.tradingViewSymbol).toBe(v.stock.tradingViewSymbol);
 
       // The hover's copy names this stock and the curator, and never reads as the yield token's.
-      expect(info.description).toContain(`${v.stock.symbol} is Robinhood's tokenized`);
+      expect(info.description).toContain(v.stock.intro ?? `${v.stock.symbol} is Robinhood's tokenized`);
       expect(info.description).toContain(`${v.curator}'s Morpho market`);
       expect(info.description).toContain(`${v.targetLtvPct}% of its value`);
       expect(info.description).not.toBe(yieldInfo.description);

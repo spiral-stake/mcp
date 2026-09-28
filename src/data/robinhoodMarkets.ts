@@ -35,15 +35,24 @@ export const NETNET_STOCK_MARKETS = new Set([
   "0xdeb4782d012d5fd3b24962538c2f6559049d70bda4dabd2e4212dacb96c28d45", // AAPL
 ]);
 
+// Pare's own stock markets (keyed by equityVault.stockMarketId), browsed on its lend page.
+export const PARE_LEND_URL = "https://parestocks.com/lend";
+export const PARE_STOCK_MARKETS = new Set([
+  "0xd255e25cbab14a13292a127be2bce3f5c9a0fe620e4537d5bbc54daf5309458b", // pSPY-DEC27
+]);
+
 // The market whose page/curator we mean: a vault's stock leg, else the market itself.
 const partnerMarketId = (market: Market) => (market.equityVault?.stockMarketId ?? market.morphoMarketId).toLowerCase();
 
 const isNetNetMarket = (market: Market, chainId: number) =>
   chainId === ROBINHOOD_CHAIN_ID && NETNET_STOCK_MARKETS.has(partnerMarketId(market));
 
+const isPareMarket = (market: Market, chainId: number) =>
+  chainId === ROBINHOOD_CHAIN_ID && PARE_STOCK_MARKETS.has(partnerMarketId(market));
+
 // The Longbow market slug for this market, or undefined when it belongs on the Morpho app.
 const longbowSlug = (market: Market, chainId: number): string | undefined => {
-  if (chainId !== ROBINHOOD_CHAIN_ID) return undefined;
+  if (chainId !== ROBINHOOD_CHAIN_ID || isPareMarket(market, chainId)) return undefined;
   const pinned = LONGBOW_MARKET_SLUGS[partnerMarketId(market)];
   if (pinned) return pinned;
   // An equity vault not on NetNet is a Longbow stock market, and Longbow keys those by ticker — so a
@@ -55,6 +64,7 @@ const longbowSlug = (market: Market, chainId: number): string | undefined => {
 // Who curates the market (the platform, not a vault supplying it). Undefined = Spiral's own market.
 export function partnerMarketCurator(chainId: number, market: Market): string | undefined {
   if (isNetNetMarket(market, chainId)) return "NetNet Credit";
+  if (isPareMarket(market, chainId)) return "Pare";
   if (longbowSlug(market, chainId)) return "Longbow";
   return undefined;
 }
@@ -62,6 +72,7 @@ export function partnerMarketCurator(chainId: number, market: Market): string | 
 // The page where a human can inspect the market the strategy runs on.
 export function marketUrl(chainId: number, market: Market): string {
   if (isNetNetMarket(market, chainId)) return NETNET_CREDIT_URL;
+  if (isPareMarket(market, chainId)) return PARE_LEND_URL;
   const slug = longbowSlug(market, chainId);
   if (slug) return `https://www.longbow.cash/borrow/${slug}`;
   const chainSlug = MORPHO_CHAIN_SLUG[chainId] ?? "ethereum";

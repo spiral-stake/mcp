@@ -35,14 +35,16 @@ export function stockTokenInfo(v: EquityVaultConfig, yieldMarket: Market): Colla
     category: TokenCategory.Stocks,
     tradingViewSymbol: v.stock.tradingViewSymbol,
     description:
-      `${stock} is Robinhood's tokenized ${v.stock.about} on Robinhood Chain — an ERC-20 issued by ` +
-      `Robinhood Assets (Jersey) Limited that gives 1:1 price exposure to the real share, priced on-chain ` +
-      `by a Chainlink feed. Deposit ${v.loanToken.symbol} and it is swapped to ${stock} and posted as ` +
+      (v.stock.intro ??
+        `${stock} is Robinhood's tokenized ${v.stock.about} on Robinhood Chain — an ERC-20 issued by ` +
+          `Robinhood Assets (Jersey) Limited that gives 1:1 price exposure to the real share, priced on-chain ` +
+          `by a Chainlink feed.`) +
+      ` Deposit ${v.loanToken.symbol} and it is swapped to ${stock} and posted as ` +
       `collateral on ${v.curator}'s Morpho market; ${v.targetLtvPct}% of its value is borrowed back as ` +
       `${v.loanToken.symbol} and looped into ${yieldSym}, so you keep full ${stock} price exposure and ` +
       `earn the loop's net yield on top.`,
-    website: ROBINHOOD_STOCK_TOKENS_URL,
-    twitter: ROBINHOOD_TWITTER_URL,
+    website: v.stock.website ?? ROBINHOOD_STOCK_TOKENS_URL,
+    twitter: v.stock.twitter ?? ROBINHOOD_TWITTER_URL,
   };
 }
 

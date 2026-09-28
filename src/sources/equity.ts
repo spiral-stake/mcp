@@ -58,11 +58,18 @@ export async function fetchEquityMarketsData(chainId: number): Promise<Record<st
       const st = res.data[`m${i}`].state;
       // Match sources/morpho.ts: the conservative of spot vs 24h-avg borrow APY.
       const borrowApy = Math.min(Number(st.avgBorrowApy), Number(st.borrowApy));
-      const price = (await client.readContract({
-        address: v.stock.oracle as `0x${string}`,
-        abi: ORACLE_ABI,
-        functionName: "price",
-      })) as bigint;
+      // A partner oracle may revert by design (Pare's does while its TWAP is under the floor). That
+      // vault is then left out of this read — and so off the feed — without taking the others down.
+      let price: bigint;
+      try {
+        price = (await client.readContract({
+          address: v.stock.oracle as `0x${string}`,
+          abi: ORACLE_ABI,
+          functionName: "price",
+        })) as bigint;
+      } catch {
+        return;
+      }
       // Morpho oracle price is scaled by 1e(36 + loanDecimals - collateralDecimals); loan token (USDG) ~ $1.
       const scale = BigNumber(10).pow(36 + v.loanToken.decimals - v.stock.decimals);
       const stockPriceUsd = BigNumber(price.toString()).div(scale).toNumber();

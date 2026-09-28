@@ -3,7 +3,7 @@
 // too, so every strategy's link was dead), Longbow's perp/stock markets live on longbow.cash, and
 // NetNet Credit's on its credit page. The same registry names the partner curator.
 import { describe, it, expect } from "vitest";
-import { marketUrl, partnerMarketCurator, NETNET_CREDIT_URL } from "../../src/data/robinhoodMarkets.ts";
+import { marketUrl, partnerMarketCurator, NETNET_CREDIT_URL, PARE_LEND_URL } from "../../src/data/robinhoodMarkets.ts";
 import type { Market } from "../../src/types/index.ts";
 
 const mk = (over: Partial<Market> & { stockMarketId?: string }): Market =>
@@ -51,6 +51,10 @@ describe("marketUrl / partnerMarketCurator", () => {
     const nvdaNetNet = mk({ morphoMarketId: "equity-0x8b16", collateralToken: { symbol: "NVDA" } as any, stockMarketId: "0x8b16891f032a93b771347c9cb470a780e6699dd701553d3402aa3cdba6189c3e" });
     expect(marketUrl(4663, nvdaNetNet)).toBe(NETNET_CREDIT_URL);
     expect(partnerMarketCurator(4663, nvdaNetNet)).toBe("NetNet Credit");
+    // Pare's PT vault runs on Pare's own market — never the Longbow ticker fallback.
+    const pspy = mk({ morphoMarketId: "equity-0xd255", collateralToken: { symbol: "pSPY-DEC27" } as any, stockMarketId: "0xd255e25cbab14a13292a127be2bce3f5c9a0fe620e4537d5bbc54daf5309458b" });
+    expect(marketUrl(4663, pspy)).toBe(PARE_LEND_URL);
+    expect(partnerMarketCurator(4663, pspy)).toBe("Pare");
     // A Longbow vault added later without a pinned slug still resolves by ticker.
     const later = mk({ morphoMarketId: "equity-0xnew", collateralToken: { symbol: "QQQ" } as any, stockMarketId: "0xnew" });
     expect(marketUrl(4663, later)).toBe("https://www.longbow.cash/borrow/QQQ");

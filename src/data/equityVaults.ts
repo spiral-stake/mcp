@@ -28,6 +28,13 @@ export interface EquityVaultConfig {
     underlying: string;
     /** The rest of the sentence "SYMBOL is Robinhood's tokenized …" — names the real share/ETF and its listing. */
     about: string;
+    /**
+     * Set when the stock leg is NOT a plain Robinhood stock token (e.g. Pare's principal token):
+     * the opening sentence that replaces the Robinhood one built from `about`, and the issuer's links.
+     */
+    intro?: string;
+    website?: string;
+    twitter?: string;
   };
   /** Who curates the stock market (shown in the vault's description; the app links there via MarketLink). */
   curator: string;
@@ -192,6 +199,40 @@ export const EQUITY_VAULTS: EquityVaultConfig[] = [
     yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
     yieldLeverage: 10.5,
     curator: "NetNet Credit",
+  },
+  // Pare's principal token on SPY (parestocks.com). The stock leg runs on Pare's own Morpho market,
+  // priced by Pare's oracle: Chainlink RHSPY/USD x the pSPY/SPY pool's 30-minute TWAP. That oracle
+  // reverts by design (TWAP under its floor, unsynced accountant) — see sources/equity.ts.
+  {
+    chainId: 4663,
+    id: "equity-0xd255e25cbab14a13292a127be2bce3f5c9a0fe620e4537d5bbc54daf5309458b",
+    morpho: "0x9D53d5E3bd5E8d4Cbfa6DB1ca238AEA02E651010",
+    stockMarketId: "0xd255e25cbab14a13292a127be2bce3f5c9a0fe620e4537d5bbc54daf5309458b",
+    stock: {
+      address: "0x1d0d084ee243eC25876547E69Ca54A499E253ac9",
+      symbol: "pSPY-DEC27",
+      underlying: "S&P 500",
+      about: "share of the SPDR S&P 500 ETF Trust (NYSE Arca: SPY), which tracks the S&P 500 index",
+      intro:
+        "pSPY-DEC27 is Pare's principal token on SPY, Robinhood's tokenized share of the SPDR S&P 500 " +
+        "ETF Trust: it redeems for SPY at maturity on 31 Dec 2027 and trades at a discount to it until " +
+        "then, so it carries SPY's price exposure. It is priced on-chain by Pare's oracle (the Chainlink " +
+        "SPY feed x the pSPY/SPY pool's 30-minute average).",
+      website: "https://parestocks.com",
+      twitter: "https://x.com/PareStocks",
+      tradingViewSymbol: "AMEX:SPY",
+      name: "pSPY",
+      decimals: 18,
+      oracle: "0xc2414099151326C5d238B9F00609f1a12283B723",
+    },
+    irm: "0x2BD3d5965B26B51814AC95127B2b80dD6CcC0fa1",
+    lltvRaw: "625000000000000000",
+    loanToken: { address: "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168", symbol: "USDG", decimals: 6 },
+    targetLtvPct: 50,
+    liqLtvPct: 62.5,
+    yieldMarketId: "0x919a9b6b94dae7c86620eaf7a08e597aae8a4c3a9e9c7671771fbaf62b6b61c7",
+    yieldLeverage: 10.5,
+    curator: "Pare",
   },
 ];
 
