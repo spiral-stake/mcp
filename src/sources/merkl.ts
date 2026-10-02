@@ -228,7 +228,13 @@ const mergeSpiralIncentives = async (
     const records: MerklAprRecord[] = [];
     for (let ts = c.start * 1000; ts <= Math.min(nowMs, endMs); ts += DAY_MS) records.push({ ts, apr });
     if (endMs < nowMs) records.push({ ts: endMs, apr: 0 });
-    collateralHistories[market] = mergeAprRecords([collateralHistories[market] ?? [], records]);
+    // Sum with any history already on the market (a Merkl MORPHOCOLLATERAL campaign, or an earlier Spiral
+    // campaign): both are step functions, so the combined rate at each snapshot is the sum of the two.
+    const prevHistory = collateralHistories[market] ?? [];
+    collateralHistories[market] = mergeAprRecords([prevHistory, records]).map(({ ts }) => ({
+      ts,
+      apr: incentiveAprAt(prevHistory, ts) + incentiveAprAt(records, ts),
+    }));
 
     if (nowMs >= endMs) continue;
     const prev = collateralSpot[market];
