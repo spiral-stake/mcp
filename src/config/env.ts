@@ -52,6 +52,9 @@ const schema = z.object({
   // VITE_MIN_BORROWABLE_USD and VITE_PT_MINIMUM_MATURITY_DAYS. Used to hide unusable strategies
   // from the agent endpoint (/v1/strategies).
   MIN_BORROWABLE_USD: z.coerce.number().nonnegative().default(10000),
+  // Robinhood Chain floor. It used to be exempt from MIN_BORROWABLE_USD entirely (bootstrapping),
+  // which listed markets with no borrowable liquidity at all — a leveraged open on one reverts.
+  ROBINHOOD_MIN_BORROWABLE_USD: z.coerce.number().nonnegative().default(2500),
   PT_MINIMUM_MATURITY_DAYS: z.coerce.number().nonnegative().default(10),
 
   // Dashboard service — source of Spiral's own Merkl (Encompassing) campaigns, merged into the

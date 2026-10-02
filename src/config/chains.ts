@@ -5,6 +5,11 @@ import { env } from "./env.ts";
 
 export const ROBINHOOD_CHAIN_ID = 4663;
 
+// Least borrowable liquidity a market must have to be listed. Robinhood has its own (lower) floor:
+// its markets are young and thin, but a market with nothing to borrow cannot be opened at all.
+export const minBorrowableUsd = (chainId: number): number =>
+  chainId === ROBINHOOD_CHAIN_ID ? env.ROBINHOOD_MIN_BORROWABLE_USD : env.MIN_BORROWABLE_USD;
+
 // The default chain when a request omits ?chainId. Always supported.
 export const PRIMARY_CHAIN_ID = env.CHAIN_ID;
 

@@ -10,6 +10,7 @@ import { oracleTypeOf } from "../data/markets.ts";
 import { rawStore } from "../cache/store.ts";
 import { KEYS } from "./../cache/policy.ts";
 import { env } from "../config/env.ts";
+import { minBorrowableUsd } from "../config/chains.ts";
 import type { EquityMarketRaw } from "../sources/equity.ts";
 import type { ExitLiquidityMap } from "../sources/exitLiquidity.ts";
 
@@ -138,7 +139,10 @@ export function buildEquityMarkets(chainId: number, allMarkets: Market[]): Marke
       // real price fall ("market"). Unset it and the vault ships no oracle.type at all.
       oracleType: oracleTypeOf(v.stock.oracle),
       curators: undefined,
-      visible: true,
+      // A vault borrows USDG against the stock on the partner market, so with nothing left to borrow
+      // there the deposit reverts. Below the floor it stays in /v1/app/markets (so an existing
+      // position still resolves) but drops off the agent surface, as an ineligible loop market does.
+      visible: raw.liquidityUsd >= minBorrowableUsd(chainId),
       // Liquidity: the SPY stock market's real borrow-side depth — the vault's scaling ceiling. EVERY
       // liquidity field is overridden, not just the USD one: the clone carries the syrup market's
       // ~$9M, but the display ("available to borrow" reads paLiquidityAssets) and the deposit cap
