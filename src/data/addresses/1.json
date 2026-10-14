@@ -2102,6 +2102,26 @@
       "maxLtv": 857500000000000000,
       "morphoMarketId": "0xa3724490242354d512a92b79d779fa2037845233f0096c9acac36a1033097aee",
       "oracle": "0xB78d26ba977898Defe668886d56b0FA1ca04cD4e"
+    },
+    "0x17f7ae1b52670010976b3fe41324cbb2b1eb7dd8f492e51764b2828371b86b84": {
+      "collateralToken": {
+        "address": "0x7743e50F534a7f9F1791DdE7dCD89F7783Eefc39",
+        "decimals": 18,
+        "name": "f(x) USD Saving",
+        "symbol": "fxSAVE"
+      },
+      "correlated": true,
+      "irm": "0x870aC11D48B15DB9a138Cf899d20F13F79Ba00BC",
+      "liqLtv": 915000000000000000,
+      "loanToken": {
+        "address": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+        "decimals": 6,
+        "name": "USD Coin",
+        "symbol": "USDC"
+      },
+      "maxLtv": 912500000000000000,
+      "morphoMarketId": "0x17f7ae1b52670010976b3fe41324cbb2b1eb7dd8f492e51764b2828371b86b84",
+      "oracle": "0x16931Dcc888754Ae780B153598376a6474DE4440"
     }
   },
   "morphoAddress": "0xBBBBBbbBBb9cC5e90e3b3Af64bdAF62C37EEFFCb"
